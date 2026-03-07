@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotización ALCOP</title>
+
+<!-- BOOTSTRAP -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<!-- BOOTSTRAP ICONS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+
+    /* ===== LINEAS DECORATIVAS (SOLO IMPRESION/PDF) ===== */
+    .lineas-decorativas {
+        display: none;
+        pointer-events: none;
+    }
+
+    .linea {
+        width: 8px;
+        border-radius: 999px;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color-adjust: exact;
+    }
+
+    .linea-1 { height: 60px;  background: #6f42c1; background-color: #6f42c1; }
+    .linea-2 { height: 95px;  background: #dc3545; background-color: #dc3545; }
+    .linea-3 { height: 130px; background: #ffc107; background-color: #ffc107; }
+    .linea-4 { height: 75px;  background: #6f42c1; background-color: #6f42c1; }
+    .linea-5 { height: 150px; background: #dc3545; background-color: #dc3545; }
+    .linea-6 { height: 110px; background: #ffc107; background-color: #ffc107; }
+
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #34495e;
+        --accent-color: #3498db;
+        --text-color: #333;
+        --border-color: #e0e0e0;
+    }
+
+    body {
+        background: #f8f9fa;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--text-color);
+    }
+
+    .cotizacion-container {
+        background: white;
+        padding: 40px;
+        max-width: 900px;
+        margin: 40px auto;
+        border-left: 6px solid var(--primary-color);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    .logo {
+        max-height: 80px;
+        transition: all 0.3s ease;
+    }
+
+    .logo:hover {
+        transform: scale(1.05);
+    }
+
+    .tabla-cotizacion th {
+        background: #f8f9fa;
+        text-align: center;
+        font-weight: 600;
+        color: var(--primary-color);
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .tabla-cotizacion td {
+        vertical-align: middle;
+        border-bottom: 1px solid #eee;
+    }
+
+    .total-box {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--primary-color);
+        border-top: 2px solid var(--border-color);
+        padding-top: 15px;
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--secondary-color);
+        border-color: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-success {
+        background-color: #27ae60;
+        border-color: #27ae60;
+        transition: all 0.3s ease;
+    }
+
+    .btn-success:hover {
+        background-color: #2ecc71;
+        border-color: #2ecc71;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-danger {
+        background-color: #e74c3c;
+        border-color: #e74c3c;
+        transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+        background-color: #c0392b;
+        border-color: #c0392b;
+        transform: translateY(-1px);
+    }
+
+    .form-control:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    .card-header {
+        background: var(--primary-color);
+        color: white;
+        border-radius: 8px 8px 0 0 !important;
+    }
+
+    .section-title {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--accent-color);
+        padding-bottom: 10px;
+    }
+
+    .producto-img {
+        max-width: 120px;
+        max-height: 120px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid var(--border-color);
+    }
+
+    .input-imagen-grande {
+        min-height: 48px;
+    }
+
+    .descuento-section {
+        display: none;
+        justify-content: space-between;
+    }
+
+    .descuento-section.visible {
+        display: flex;
+    }
+
+    .text-muted {
+        color: #6c757d !important;
+    }
+
+    @media print {
+        .no-print {
+            display: none;
+        }
+        body {
+            background: white;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            color-adjust: exact;
+        }
+        .cotizacion-container {
+            box-shadow: none;
+            border: none;
+            position: relative;
+            padding-left: 95px;
+        }
+        /* Ocultar columna de acciones al imprimir */
+        .tabla-cotizacion th:last-child,
+        .tabla-cotizacion td:last-child {
+            display: none;
+        }
+
+        .descuento-section {
+            display: none !important;
+        }
+
+        .descuento-section.visible {
+            display: flex !important;
+        }
+
+        .lineas-decorativas {
+            display: flex !important;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-start;
+            position: absolute;
+            left: 26px;
+            top: 0;
+            bottom: 0;
+            width: 38px;
+            pointer-events: none;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            color-adjust: exact;
+        }
+
+        .lineas-decorativas .linea {
+            position: relative;
+        }
+
+        .lineas-decorativas .linea-1 { margin-left: 0; }
+        .lineas-decorativas .linea-2 { margin-left: 30px; }
+        .lineas-decorativas .linea-3 { margin-left: 15px; }
+        .lineas-decorativas .linea-4 { margin-left: 0; }
+        .lineas-decorativas .linea-5 { margin-left: 30px; }
+        .lineas-decorativas .linea-6 { margin-left: 15px; }
+
+        .lineas-decorativas .linea-1,
+        .lineas-decorativas .linea-4 {
+            background: #5821be;
+        }
+
+        .lineas-decorativas .linea-2,
+        .lineas-decorativas .linea-5 {
+            background: #dc3545;
+        }
+
+        .lineas-decorativas .linea-3,
+        .lineas-decorativas .linea-6 {
+            background: #ffc107;
+        }
+    }
+</style>
+</head>
+<body>
+
+<div class="container no-print mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Generador de Cotización</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Género</label>
+                    <select id="genero" class="form-select">
+                        <option value="Señor">Señor</option>
+                        <option value="Señora">Señora</option>
+                        <option value="Señores">Señores</option>
+                        <option value="Arquitecto">Arquitecto</option>
+                        <option value="Arquitecta">Arquitecta</option>
+                        <option value="Interiorista">Interiorista</option>
+                        <option value="Doctor">Doctor</option>
+                        <option value="Doctora">Doctora</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label fw-bold">Nombre del Cliente</label>
+                    <input type="text" id="cliente" class="form-control" placeholder="Ingrese el nombre del cliente">
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="row">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Producto</label>
+                    <input type="text" id="producto" class="form-control" placeholder="Descripción del producto">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Cantidad</label>
+                    <input type="number" id="cantidad" class="form-control" placeholder="0">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Precio Unitario</label>
+                    <input type="number" id="precio" class="form-control" placeholder="0">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Imagen del Producto</label>
+                    <input type="file" id="imagenProducto" class="form-control input-imagen-grande" accept="image/*">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button id="agregarProducto" class="btn btn-success w-100">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="row">
+                <!-- <div class="col-md-4">
+                    <label class="form-label fw-bold">Logo de la Empresa</label>
+                    <input type="file" id="logoInput" class="form-control" accept="image/*">
+                    <small class="text-muted">Opcional: Suba un logo para personalizar la cotización</small>
+                </div> -->
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Nombre del Vendedor</label>
+                    <input type="text" id="vendedor" class="form-control" placeholder="Ingrese el nombre del vendedor">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Descuento General (%)</label>
+                    <div class="input-group">
+                        <input type="number" id="descuentoGeneral" class="form-control" placeholder="0" min="0" max="100">
+                        <button id="aplicarDescuento" class="btn btn-outline-primary">Aplicar</button>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button id="generarPDF" class="btn btn-primary w-100">
+                        <i class="bi bi-download"></i> Exportar PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PLANTILLA -->
+<div class="cotizacion-container">
+
+    <div class="lineas-decorativas">
+        <span class="linea linea-1"></span>
+        <span class="linea linea-2"></span>
+        <span class="linea linea-3"></span>
+        <span class="linea linea-4"></span>
+        <span class="linea linea-5"></span>
+        <span class="linea linea-6"></span>
+    </div>
+    
+    <div class="d-flex justify-content-between align-items-center">
+        <img id="logoPreview" class="logo" src="img/logoN.png" alt="ALCOP logo">
+        <h6 id="fecha"></h6>
+    </div>
+
+    <p class="mt-4">
+        <span id="saludoGenero">Señor:</span><br>
+        <strong id="nombreCliente"></strong>
+    </p>
+
+    <p>Cordial saludo,</p>
+
+    <p>
+        Para ALCOP es un agrado poner a su disposición la siguiente cotización:
+    </p>
+
+    <table class="table table-bordered tabla-cotizacion mt-4">
+        <thead>
+            <tr>
+                <th>DESCRIPCIÓN</th>
+                <th>CANTIDAD</th>
+                <th>PRECIO UNITARIO</th>
+                <th>SUBTOTAL</th>
+                <th id="columnaImagen">IMAGEN</th>
+                <th>ACCIONES</th>
+            </tr>
+        </thead>
+        <tbody id="tablaBody">
+        </tbody>
+    </table>
+
+    <div class="row mt-4">
+        <div class="col-md-8"></div>
+        <div class="col-md-4">
+            <div class="border p-3">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span id="subtotal" class="fw-bold">$0</span>
+                </div>
+                <div id="descuentoSection" class="mb-2 descuento-section">
+                    <span>Descuento:</span>
+                    <span id="descuentoValor" class="fw-bold text-danger">$0</span>
+                </div>
+                <div class="d-flex justify-content-between total-box">
+                    <span>Total General:</span>
+                    <span id="totalGeneral">$0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="mt-4">
+        En espera de su amable respuesta,
+    </p>
+
+    <p>
+        Atentamente,<br>
+        <span id="nombreVendedor">ALCOP.</span>
+     </p>
+
+</div>
+
+<script src="cotizaciones.js"></script>
+
+</body>
+</html>
+
