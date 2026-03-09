@@ -415,6 +415,36 @@
     </p>
 </div>
 
+<div class="modal fade" id="editarInstalacionModal" tabindex="-1" aria-labelledby="editarInstalacionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editarInstalacionModalLabel">Editar item de instalación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="editarDescripcion" class="form-label fw-bold">Descripción</label>
+                    <input type="text" id="editarDescripcion" class="form-control" placeholder="Descripción">
+                </div>
+                <div class="mb-3">
+                    <label for="editarCantidad" class="form-label fw-bold">Cantidad</label>
+                    <input type="number" id="editarCantidad" class="form-control" min="1" step="1" placeholder="0">
+                </div>
+                <div class="mb-0">
+                    <label for="editarPrecio" class="form-label fw-bold">Precio unitario</label>
+                    <input type="number" id="editarPrecio" class="form-control" min="1" step="1" placeholder="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="guardarEdicionInstalacion">Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="cotizaciones.js"></script>
 </body>
 </html>

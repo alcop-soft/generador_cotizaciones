@@ -6,9 +6,29 @@
     }).format(valor);
 }
 
+function formatoNumero(valor) {
+    return new Intl.NumberFormat("es-CO", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    }).format(valor);
+}
+
+function normalizarTexto(texto) {
+    return (texto || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+}
+
+function esProductoInstalacion(producto) {
+    return normalizarTexto(producto.descripcion).includes("instalacion");
+}
+
 let productos = [];
 let descuentoGeneral = 0;
 let tablaCounter = 1;
+let productoEditandoId = null;
+let editarInstalacionModal = null;
 
 function leerImagenProducto() {
     const inputImagen = document.getElementById("imagenProducto");
@@ -38,10 +58,16 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("agregarTabla").addEventListener("click", agregarNuevaTabla);
     document.getElementById("genero").addEventListener("change", actualizarSaludo);
     document.getElementById("cliente").addEventListener("input", actualizarSaludo);
+    document.getElementById("guardarEdicionInstalacion").addEventListener("click", guardarEdicionProducto);
 
     const vendedorInput = document.getElementById("vendedor");
     if (vendedorInput) {
         vendedorInput.addEventListener("input", actualizarNombreVendedor);
+    }
+
+    if (window.bootstrap) {
+        const modalElement = document.getElementById("editarInstalacionModal");
+        editarInstalacionModal = new window.bootstrap.Modal(modalElement);
     }
 
     actualizarSaludo();
@@ -104,6 +130,61 @@ function eliminarProducto(id) {
     calcularTotales();
 }
 
+function abrirModalEdicion(id) {
+    const producto = productos.find((item) => item.id === id);
+    if (!producto) {
+        return;
+    }
+
+    if (!esProductoInstalacion(producto)) {
+        alert("Solo los items de instalación se pueden editar desde este botón.");
+        return;
+    }
+
+    productoEditandoId = id;
+    document.getElementById("editarDescripcion").value = producto.descripcion;
+    document.getElementById("editarCantidad").value = producto.cantidad;
+    document.getElementById("editarPrecio").value = producto.precio;
+
+    if (editarInstalacionModal) {
+        editarInstalacionModal.show();
+    }
+}
+
+function guardarEdicionProducto() {
+    if (productoEditandoId === null) {
+        return;
+    }
+
+    const descripcion = document.getElementById("editarDescripcion").value.trim();
+    const cantidad = Number.parseFloat(document.getElementById("editarCantidad").value);
+    const precio = Number.parseFloat(document.getElementById("editarPrecio").value);
+
+    if (!descripcion || !Number.isFinite(cantidad) || !Number.isFinite(precio) || cantidad <= 0 || precio <= 0) {
+        alert("Complete descripción, cantidad y precio con valores válidos.");
+        return;
+    }
+
+    const indice = productos.findIndex((item) => item.id === productoEditandoId);
+    if (indice === -1) {
+        return;
+    }
+
+    productos[indice].descripcion = descripcion;
+    productos[indice].cantidad = cantidad;
+    productos[indice].precio = precio;
+    productos[indice].subtotal = cantidad * precio;
+
+    renderizarTabla();
+    calcularTotales();
+
+    if (editarInstalacionModal) {
+        editarInstalacionModal.hide();
+    }
+
+    productoEditandoId = null;
+}
+
 function agregarNuevaTabla() {
     tablaCounter += 1;
     alert(`Nueva opción ${tablaCounter} creada. Los siguientes productos pertenecerán a esta opción.`);
@@ -148,14 +229,22 @@ function renderizarTabla() {
             const imagenCelda = producto.imagen
                 ? `<img src="${producto.imagen}" alt="Imagen de ${producto.descripcion}" class="producto-img">`
                 : '<span class="text-muted">Sin imagen</span>';
+            const botonEditarInstalacion = esProductoInstalacion(producto)
+                ? `
+                    <button class="btn btn-sm btn-primary me-1" onclick="abrirModalEdicion(${producto.id})">
+                        <i class="bi bi-pencil-square"></i> Editar
+                    </button>
+                `
+                : "";
 
             tr.innerHTML = `
                 <td>${producto.descripcion}</td>
-                <td class="text-center">${producto.cantidad}</td>
+                <td class="text-center">${formatoNumero(producto.cantidad)}</td>
                 <td class="text-end">${formatoPeso(producto.precio)}</td>
                 <td class="text-end">${formatoPeso(producto.subtotal)}</td>
                 ${mostrarColumnaImagen ? `<td class="text-center">${imagenCelda}</td>` : ""}
                 <td class="text-center">
+                    ${botonEditarInstalacion}
                     <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${producto.id})">
                         <i class="bi bi-trash"></i> Eliminar
                     </button>
@@ -202,11 +291,11 @@ function calcularTotales() {
     totalesGenerales.style.display = "block";
 
     const productosSinInstalacion = productos.filter(
-        (producto) => !producto.descripcion.toLowerCase().includes("instalacion")
+        (producto) => !esProductoInstalacion(producto)
     );
 
     const productosInstalacion = productos.filter(
-        (producto) => producto.descripcion.toLowerCase().includes("instalacion")
+        (producto) => esProductoInstalacion(producto)
     );
 
     const subtotalSinInstalacion = productosSinInstalacion.reduce((acc, producto) => acc + producto.subtotal, 0);
