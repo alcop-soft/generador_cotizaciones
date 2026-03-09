@@ -24,6 +24,11 @@ function esProductoInstalacion(producto) {
     return normalizarTexto(producto.descripcion).includes("instalacion");
 }
 
+function esProductoSinDescuento(producto) {
+    const descripcion = normalizarTexto(producto.descripcion);
+    return descripcion.includes("instalacion") || descripcion.includes("mantenimiento");
+}
+
 let productos = [];
 let descuentoGeneral = 0;
 let tablaCounter = 1;
@@ -136,11 +141,6 @@ function abrirModalEdicion(id) {
         return;
     }
 
-    if (!esProductoInstalacion(producto)) {
-        alert("Solo los items de instalación se pueden editar desde este botón.");
-        return;
-    }
-
     productoEditandoId = id;
     document.getElementById("editarDescripcion").value = producto.descripcion;
     document.getElementById("editarCantidad").value = producto.cantidad;
@@ -229,13 +229,11 @@ function renderizarTabla() {
             const imagenCelda = producto.imagen
                 ? `<img src="${producto.imagen}" alt="Imagen de ${producto.descripcion}" class="producto-img">`
                 : '<span class="text-muted">Sin imagen</span>';
-            const botonEditarInstalacion = esProductoInstalacion(producto)
-                ? `
-                    <button class="btn btn-sm btn-primary me-1" onclick="abrirModalEdicion(${producto.id})">
-                        <i class="bi bi-pencil-square"></i> Editar
-                    </button>
-                `
-                : "";
+            const botonEditar = `
+                <button class="btn btn-sm btn-primary me-1" onclick="abrirModalEdicion(${producto.id})">
+                    <i class="bi bi-pencil-square"></i> Editar
+                </button>
+            `;
 
             tr.innerHTML = `
                 <td>${producto.descripcion}</td>
@@ -244,7 +242,7 @@ function renderizarTabla() {
                 <td class="text-end">${formatoPeso(producto.subtotal)}</td>
                 ${mostrarColumnaImagen ? `<td class="text-center">${imagenCelda}</td>` : ""}
                 <td class="text-center">
-                    ${botonEditarInstalacion}
+                    ${botonEditar}
                     <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${producto.id})">
                         <i class="bi bi-trash"></i> Eliminar
                     </button>
@@ -291,15 +289,15 @@ function calcularTotales() {
     totalesGenerales.style.display = "block";
 
     const productosSinInstalacion = productos.filter(
-        (producto) => !esProductoInstalacion(producto)
+        (producto) => !esProductoSinDescuento(producto)
     );
 
-    const productosInstalacion = productos.filter(
-        (producto) => esProductoInstalacion(producto)
+    const productosSinDescuento = productos.filter(
+        (producto) => esProductoSinDescuento(producto)
     );
 
     const subtotalSinInstalacion = productosSinInstalacion.reduce((acc, producto) => acc + producto.subtotal, 0);
-    const subtotalInstalacion = productosInstalacion.reduce((acc, producto) => acc + producto.subtotal, 0);
+    const subtotalInstalacion = productosSinDescuento.reduce((acc, producto) => acc + producto.subtotal, 0);
     const valorDescuento = subtotalSinInstalacion * (descuentoGeneral / 100);
     const total = subtotalSinInstalacion - valorDescuento + subtotalInstalacion;
 
