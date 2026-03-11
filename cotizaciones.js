@@ -31,6 +31,7 @@ function esProductoSinDescuento(producto) {
 
 let productos = [];
 let descuentoGeneral = 0;
+let ivaActivo = false;
 let tablaCounter = 1;
 let productoEditandoId = null;
 let editarInstalacionModal = null;
@@ -64,6 +65,12 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("genero").addEventListener("change", actualizarSaludo);
     document.getElementById("cliente").addEventListener("input", actualizarSaludo);
     document.getElementById("guardarEdicionInstalacion").addEventListener("click", guardarEdicionProducto);
+
+    const ivaCheckbox = document.getElementById("aplicarIva");
+    if (ivaCheckbox) {
+        ivaActivo = ivaCheckbox.checked;
+        ivaCheckbox.addEventListener("change", aplicarIva);
+    }
 
     const vendedorInput = document.getElementById("vendedor");
     if (vendedorInput) {
@@ -126,6 +133,12 @@ function aplicarDescuentoGeneral() {
 
     document.getElementById("descuentoGeneral").value = descuentoGeneral;
     renderizarTabla();
+    calcularTotales();
+}
+
+function aplicarIva() {
+    const ivaCheckbox = document.getElementById("aplicarIva");
+    ivaActivo = ivaCheckbox ? ivaCheckbox.checked : false;
     calcularTotales();
 }
 
@@ -299,10 +312,18 @@ function calcularTotales() {
     const subtotalSinInstalacion = productosSinInstalacion.reduce((acc, producto) => acc + producto.subtotal, 0);
     const subtotalInstalacion = productosSinDescuento.reduce((acc, producto) => acc + producto.subtotal, 0);
     const valorDescuento = subtotalSinInstalacion * (descuentoGeneral / 100);
-    const total = subtotalSinInstalacion - valorDescuento + subtotalInstalacion;
+    const baseTotal = subtotalSinInstalacion - valorDescuento + subtotalInstalacion;
+    const ivaCheckbox = document.getElementById("aplicarIva");
+    const aplicarIvaFlag = ivaCheckbox ? ivaCheckbox.checked : ivaActivo;
+    const valorIva = aplicarIvaFlag ? baseTotal * 0.19 : 0;
+    const total = baseTotal + valorIva;
 
     document.getElementById("subtotal").innerText = formatoPeso(subtotalSinInstalacion + subtotalInstalacion);
     document.getElementById("descuentoValor").innerText = formatoPeso(valorDescuento);
+    const ivaValor = document.getElementById("ivaValor");
+    if (ivaValor) {
+        ivaValor.innerText = formatoPeso(valorIva);
+    }
     document.getElementById("totalGeneral").innerText = formatoPeso(total);
 
     const descuentoSection = document.getElementById("descuentoSection");
@@ -310,6 +331,15 @@ function calcularTotales() {
         descuentoSection.classList.add("visible");
     } else {
         descuentoSection.classList.remove("visible");
+    }
+
+    const ivaSection = document.getElementById("ivaSection");
+    if (ivaSection) {
+        if (aplicarIvaFlag) {
+            ivaSection.classList.add("visible");
+        } else {
+            ivaSection.classList.remove("visible");
+        }
     }
 }
 
