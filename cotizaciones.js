@@ -35,6 +35,7 @@ let ivaActivo = false;
 let tablaCounter = 1;
 let productoEditandoId = null;
 let editarInstalacionModal = null;
+const UNIDAD_DEFAULT = "Unidades";
 
 function leerImagenProducto() {
     const inputImagen = document.getElementById("imagenProducto");
@@ -52,6 +53,53 @@ function leerImagenProducto() {
     });
 }
 
+function toggleUnidadPersonalizada(selectEl, inputEl) {
+    if (!selectEl || !inputEl) {
+        return;
+    }
+
+    const esOtra = selectEl.value === "otra";
+    inputEl.classList.toggle("d-none", !esOtra);
+    if (!esOtra) {
+        inputEl.value = "";
+    }
+}
+
+function leerUnidadSeleccionada(selectId, inputId) {
+    const selectEl = document.getElementById(selectId);
+    if (!selectEl) {
+        return "";
+    }
+
+    if (selectEl.value === "otra") {
+        const inputEl = document.getElementById(inputId);
+        return inputEl ? inputEl.value.trim() : "";
+    }
+
+    return selectEl.value.trim();
+}
+
+function aplicarUnidadSeleccionada(selectId, inputId, unidad) {
+    const selectEl = document.getElementById(selectId);
+    const inputEl = document.getElementById(inputId);
+
+    if (!selectEl || !inputEl) {
+        return;
+    }
+
+    const opciones = Array.from(selectEl.options).map((option) => option.value);
+    if (unidad && opciones.includes(unidad) && unidad !== "otra") {
+        selectEl.value = unidad;
+        inputEl.classList.add("d-none");
+        inputEl.value = "";
+        return;
+    }
+
+    selectEl.value = "otra";
+    inputEl.classList.remove("d-none");
+    inputEl.value = unidad || "";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const fecha = new Date();
     const opcionesFecha = { day: "numeric", month: "long", year: "numeric" };
@@ -65,6 +113,20 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("genero").addEventListener("change", actualizarSaludo);
     document.getElementById("cliente").addEventListener("input", actualizarSaludo);
     document.getElementById("guardarEdicionInstalacion").addEventListener("click", guardarEdicionProducto);
+
+    const unidadSelect = document.getElementById("unidadCantidad");
+    const unidadPersonalizada = document.getElementById("unidadPersonalizada");
+    if (unidadSelect && unidadPersonalizada) {
+        unidadSelect.addEventListener("change", () => toggleUnidadPersonalizada(unidadSelect, unidadPersonalizada));
+        toggleUnidadPersonalizada(unidadSelect, unidadPersonalizada);
+    }
+
+    const editarUnidadSelect = document.getElementById("editarUnidad");
+    const editarUnidadPersonalizada = document.getElementById("editarUnidadPersonalizada");
+    if (editarUnidadSelect && editarUnidadPersonalizada) {
+        editarUnidadSelect.addEventListener("change", () => toggleUnidadPersonalizada(editarUnidadSelect, editarUnidadPersonalizada));
+        toggleUnidadPersonalizada(editarUnidadSelect, editarUnidadPersonalizada);
+    }
 
     const ivaCheckbox = document.getElementById("aplicarIva");
     if (ivaCheckbox) {
@@ -93,10 +155,16 @@ async function agregarProducto() {
     const producto = document.getElementById("producto").value.trim();
     const cantidad = Number.parseFloat(document.getElementById("cantidad").value);
     const precio = Number.parseFloat(document.getElementById("precio").value);
+    const unidad = leerUnidadSeleccionada("unidadCantidad", "unidadPersonalizada");
     const imagen = await leerImagenProducto();
 
     if (!producto || !Number.isFinite(cantidad) || !Number.isFinite(precio) || cantidad <= 0 || precio <= 0) {
         alert("Complete producto, cantidad y precio con valores válidos.");
+        return;
+    }
+
+    if (!unidad) {
+        alert("Indique la unidad de medida para la cantidad.");
         return;
     }
 
@@ -106,6 +174,7 @@ async function agregarProducto() {
         id: Date.now() + Math.floor(Math.random() * 1000),
         descripcion: producto,
         cantidad,
+        unidad,
         precio,
         subtotal,
         imagen,
@@ -120,6 +189,15 @@ async function agregarProducto() {
     document.getElementById("cantidad").value = "";
     document.getElementById("precio").value = "";
     document.getElementById("imagenProducto").value = "";
+    const unidadSelect = document.getElementById("unidadCantidad");
+    const unidadPersonalizada = document.getElementById("unidadPersonalizada");
+    if (unidadSelect) {
+        unidadSelect.value = UNIDAD_DEFAULT;
+    }
+    if (unidadPersonalizada) {
+        unidadPersonalizada.value = "";
+        unidadPersonalizada.classList.add("d-none");
+    }
 }
 
 function aplicarDescuentoGeneral() {
@@ -157,6 +235,7 @@ function abrirModalEdicion(id) {
     productoEditandoId = id;
     document.getElementById("editarDescripcion").value = producto.descripcion;
     document.getElementById("editarCantidad").value = producto.cantidad;
+    aplicarUnidadSeleccionada("editarUnidad", "editarUnidadPersonalizada", producto.unidad);
     document.getElementById("editarPrecio").value = producto.precio;
 
     if (editarInstalacionModal) {
@@ -172,9 +251,15 @@ function guardarEdicionProducto() {
     const descripcion = document.getElementById("editarDescripcion").value.trim();
     const cantidad = Number.parseFloat(document.getElementById("editarCantidad").value);
     const precio = Number.parseFloat(document.getElementById("editarPrecio").value);
+    const unidad = leerUnidadSeleccionada("editarUnidad", "editarUnidadPersonalizada");
 
     if (!descripcion || !Number.isFinite(cantidad) || !Number.isFinite(precio) || cantidad <= 0 || precio <= 0) {
         alert("Complete descripción, cantidad y precio con valores válidos.");
+        return;
+    }
+
+    if (!unidad) {
+        alert("Indique la unidad de medida para la cantidad.");
         return;
     }
 
@@ -185,6 +270,7 @@ function guardarEdicionProducto() {
 
     productos[indice].descripcion = descripcion;
     productos[indice].cantidad = cantidad;
+    productos[indice].unidad = unidad;
     productos[indice].precio = precio;
     productos[indice].subtotal = cantidad * precio;
 
@@ -242,6 +328,7 @@ function renderizarTabla() {
             const imagenCelda = producto.imagen
                 ? `<img src="${producto.imagen}" alt="Imagen de ${producto.descripcion}" class="producto-img">`
                 : '<span class="text-muted">Sin imagen</span>';
+            const unidadTexto = producto.unidad ? ` ${producto.unidad}` : "";
             const botonEditar = `
                 <button class="btn btn-sm btn-primary me-1" onclick="abrirModalEdicion(${producto.id})">
                     <i class="bi bi-pencil-square"></i> Editar
@@ -250,7 +337,7 @@ function renderizarTabla() {
 
             tr.innerHTML = `
                 <td>${producto.descripcion}</td>
-                <td class="text-center">${formatoNumero(producto.cantidad)}</td>
+                <td class="text-center">${formatoNumero(producto.cantidad)}${unidadTexto}</td>
                 <td class="text-end">${formatoPeso(producto.precio)}</td>
                 <td class="text-end">${formatoPeso(producto.subtotal)}</td>
                 ${mostrarColumnaImagen ? `<td class="text-center">${imagenCelda}</td>` : ""}
