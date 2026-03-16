@@ -36,6 +36,14 @@ let tablaCounter = 1;
 let productoEditandoId = null;
 let editarInstalacionModal = null;
 const UNIDAD_DEFAULT = "Unidades";
+let notaConfirmada = false;
+const VENDEDORES = {
+    "Mateo Vanegas": "315 2762255",
+    "Marina Arbelaez": "320 8940228",
+    "Alba Arbelaez": "310 4692399",
+    "Cesar Yovanny": "310 5385318",
+    "Otro": "321 7719562"
+};
 
 function leerImagenProducto() {
     const inputImagen = document.getElementById("imagenProducto");
@@ -100,6 +108,18 @@ function aplicarUnidadSeleccionada(selectId, inputId, unidad) {
     inputEl.value = unidad || "";
 }
 
+function toggleVendedorOtro(selectEl, inputEl) {
+    if (!selectEl || !inputEl) {
+        return;
+    }
+
+    const esOtro = selectEl.value === "Otro";
+    inputEl.classList.toggle("d-none", !esOtro);
+    if (!esOtro) {
+        inputEl.value = "";
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const fecha = new Date();
     const opcionesFecha = { day: "numeric", month: "long", year: "numeric" };
@@ -134,9 +154,36 @@ document.addEventListener("DOMContentLoaded", () => {
         ivaCheckbox.addEventListener("change", aplicarIva);
     }
 
-    const vendedorInput = document.getElementById("vendedor");
-    if (vendedorInput) {
-        vendedorInput.addEventListener("input", actualizarNombreVendedor);
+    const vendedorSelect = document.getElementById("vendedor");
+    const vendedorOtroInput = document.getElementById("vendedorOtro");
+    if (vendedorSelect) {
+        vendedorSelect.addEventListener("change", () => {
+            toggleVendedorOtro(vendedorSelect, vendedorOtroInput);
+            actualizarNombreVendedor();
+        });
+        toggleVendedorOtro(vendedorSelect, vendedorOtroInput);
+    }
+    if (vendedorOtroInput) {
+        vendedorOtroInput.addEventListener("input", actualizarNombreVendedor);
+    }
+
+    const notaRapidaInput = document.getElementById("notaRapidaInput");
+    const agregarNotaBtn = document.getElementById("agregarNota");
+    const eliminarNotaBtn = document.getElementById("eliminarNota");
+    if (agregarNotaBtn) {
+        agregarNotaBtn.addEventListener("click", () => {
+            notaConfirmada = true;
+            actualizarNotaRapida();
+        });
+    }
+    if (eliminarNotaBtn) {
+        eliminarNotaBtn.addEventListener("click", () => {
+            notaConfirmada = false;
+            if (notaRapidaInput) {
+                notaRapidaInput.value = "";
+            }
+            actualizarNotaRapida();
+        });
     }
 
     if (window.bootstrap) {
@@ -146,6 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     actualizarSaludo();
     actualizarNombreVendedor();
+    actualizarNotaRapida();
     renderizarTabla();
     calcularTotales();
 });
@@ -438,13 +486,42 @@ function actualizarSaludo() {
 }
 
 function actualizarNombreVendedor() {
-    const vendedorInput = document.getElementById("vendedor");
     const nombreVendedor = document.getElementById("nombreVendedor");
+    const telefonoVendedor = document.getElementById("telefonoVendedor");
 
     if (!nombreVendedor) {
         return;
     }
 
-    const nombre = vendedorInput ? vendedorInput.value.trim() : "";
+    const vendedorSelect = document.getElementById("vendedor");
+    const vendedorOtroInput = document.getElementById("vendedorOtro");
+    const seleccionado = vendedorSelect ? vendedorSelect.value.trim() : "";
+    const esOtro = seleccionado === "Otro";
+    const nombreOtro = vendedorOtroInput ? vendedorOtroInput.value.trim() : "";
+    const nombre = esOtro ? nombreOtro : seleccionado;
     nombreVendedor.innerText = nombre || "ALCOP.";
+
+    if (telefonoVendedor) {
+        const telefono = seleccionado ? (VENDEDORES[seleccionado] || "") : "";
+        telefonoVendedor.innerText = telefono;
+    }
+}
+
+function actualizarNotaRapida() {
+    const notaInput = document.getElementById("notaRapidaInput");
+    const notaTexto = document.getElementById("notaRapidaTexto");
+    const notaCard = document.getElementById("notaRapidaCard");
+
+    if (!notaTexto) {
+        return;
+    }
+
+    const texto = notaInput ? notaInput.value.trim() : "";
+    const mostrarNota = notaConfirmada && texto.length > 0;
+
+    if (notaCard) {
+        notaCard.classList.toggle("d-none", !mostrarNota);
+    }
+
+    notaTexto.innerText = mostrarNota ? texto : "";
 }

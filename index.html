@@ -131,6 +131,45 @@
         border: 1px solid var(--line);
     }
 
+    .nota-rapida {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 14px 16px;
+        min-height: 150px;
+        background-color: #f8fafc;
+        background-image:
+            linear-gradient(#e5e7eb 1px, transparent 1px),
+            linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+        background-size: 16px 16px;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+        position: relative;
+    }
+
+    .nota-rapida .nota-delete {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 2px 6px;
+        line-height: 1;
+        font-size: 0.75rem;
+    }
+
+    .nota-rapida-title {
+        padding-left: 22px;
+    }
+
+    .nota-rapida-title {
+        font-weight: 700;
+        color: var(--brand-strong);
+        margin-bottom: 8px;
+    }
+
+    .nota-rapida-texto {
+        white-space: pre-wrap;
+        color: var(--ink);
+        min-height: 90px;
+    }
+
     .descuento-section {
         display: none;
         justify-content: space-between;
@@ -273,6 +312,34 @@
             background-color: #f1f5f9 !important;
             color: #1f2937 !important;
         }
+
+        .nota-total-row {
+            display: flex !important;
+            gap: 16px;
+            align-items: stretch;
+            flex-wrap: nowrap;
+        }
+
+        .nota-total-row > .col-md-6 {
+            flex: 0 0 50% !important;
+            max-width: 50% !important;
+            width: 50% !important;
+        }
+
+        .nota-rapida {
+            min-height: 64px;
+            padding: 8px 10px;
+            background-size: 10px 10px;
+        }
+
+        .nota-rapida-title {
+            font-size: 0.85rem;
+        }
+
+        .nota-rapida-texto {
+            font-size: 0.78rem;
+            line-height: 1.2;
+        }
     }
 </style>
 </head>
@@ -359,9 +426,24 @@
             <hr class="my-4">
 
             <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-bold">Nota rápida</label>
+                    <textarea id="notaRapidaInput" class="form-control" rows="2" placeholder="Escriba una nota corta..."></textarea>
+                    <div class="d-flex justify-content-end mt-2">
+                        <button id="agregarNota" class="btn btn-outline-secondary">Agregar nota</button>
+                    </div>
+                </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Nombre del vendedor</label>
-                    <input type="text" id="vendedor" class="form-control" placeholder="Ingrese el nombre del vendedor">
+                    <select id="vendedor" class="form-select">
+                        <option value="">Seleccione el vendedor</option>
+                        <option value="Mateo Vanegas">Mateo Vanegas</option>
+                        <option value="Marina Arbelaez">Marina Arbelaez</option>
+                        <option value="Alba Arbelaez">Alba Arbelaez</option>
+                        <option value="Cesar Yovanny">Cesar Yovanny</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                    <input type="text" id="vendedorOtro" class="form-control mt-2 d-none" placeholder="Nombre del vendedor">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Descuento general (%)</label>
@@ -422,8 +504,14 @@
         <tbody id="tablaBody"></tbody>
     </table>
 
-    <div class="row mt-4">
-        <div class="col-md-6"></div>
+    <div class="row mt-4 nota-total-row">
+                <div class="col-md-6">
+                    <div id="notaRapidaCard" class="nota-rapida d-none">
+                        <button id="eliminarNota" class="btn btn-outline-danger nota-delete no-print" type="button">✕</button>
+                        <div class="nota-rapida-title">Nota</div>
+                        <div id="notaRapidaTexto" class="nota-rapida-texto"></div>
+                    </div>
+                </div>
         <div class="col-md-6">
             <div class="border rounded-2 p-3" id="totalesGenerales">
                 <div class="d-flex justify-content-between mb-2">
@@ -450,7 +538,8 @@
 
     <p>
         Atentamente,<br>
-        <span id="nombreVendedor">ALCOP.</span>
+        <span id="nombreVendedor">ALCOP.</span><br>
+        <span id="telefonoVendedor" class="text-muted"></span>
     </p>
 </div>
 
