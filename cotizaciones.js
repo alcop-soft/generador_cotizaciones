@@ -20,12 +20,33 @@ function normalizarTexto(texto) {
         .replace(/[\u0300-\u036f]/g, "");
 }
 
+function escaparHtml(texto) {
+    return (texto || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function obtenerTituloProducto(producto) {
+    return (producto.titulo || producto.descripcion || "").trim();
+}
+
+function obtenerSubtituloProducto(producto) {
+    return (producto.subtitulo || "").trim();
+}
+
+function obtenerTextoProducto(producto) {
+    return `${obtenerTituloProducto(producto)} ${obtenerSubtituloProducto(producto)}`.trim();
+}
+
 function esProductoInstalacion(producto) {
-    return normalizarTexto(producto.descripcion).includes("instalacion");
+    return normalizarTexto(obtenerTextoProducto(producto)).includes("instalacion");
 }
 
 function esProductoSinDescuento(producto) {
-    const descripcion = normalizarTexto(producto.descripcion);
+    const descripcion = normalizarTexto(obtenerTextoProducto(producto));
     return descripcion.includes("instalacion") || descripcion.includes("mantenimiento");
 }
 
@@ -200,13 +221,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function agregarProducto() {
     const cliente = document.getElementById("cliente").value.trim();
-    const producto = document.getElementById("producto").value.trim();
+    const titulo = document.getElementById("producto").value.trim();
+    const subtitulo = document.getElementById("productoDescripcion").value.trim();
     const cantidad = Number.parseFloat(document.getElementById("cantidad").value);
     const precio = Number.parseFloat(document.getElementById("precio").value);
     const unidad = leerUnidadSeleccionada("unidadCantidad", "unidadPersonalizada");
     const imagen = await leerImagenProducto();
 
-    if (!producto || !Number.isFinite(cantidad) || !Number.isFinite(precio) || cantidad <= 0 || precio <= 0) {
+    if (!titulo || !Number.isFinite(cantidad) || !Number.isFinite(precio) || cantidad <= 0 || precio <= 0) {
         alert("Complete producto, cantidad y precio con valores válidos.");
         return;
     }
@@ -220,7 +242,9 @@ async function agregarProducto() {
 
     productos.push({
         id: Date.now() + Math.floor(Math.random() * 1000),
-        descripcion: producto,
+        titulo,
+        subtitulo,
+        descripcion: titulo,
         cantidad,
         unidad,
         precio,
@@ -234,6 +258,7 @@ async function agregarProducto() {
     calcularTotales();
 
     document.getElementById("producto").value = "";
+    document.getElementById("productoDescripcion").value = "";
     document.getElementById("cantidad").value = "";
     document.getElementById("precio").value = "";
     document.getElementById("imagenProducto").value = "";
@@ -281,7 +306,8 @@ function abrirModalEdicion(id) {
     }
 
     productoEditandoId = id;
-    document.getElementById("editarDescripcion").value = producto.descripcion;
+    document.getElementById("editarTitulo").value = obtenerTituloProducto(producto);
+    document.getElementById("editarSubtitulo").value = obtenerSubtituloProducto(producto);
     document.getElementById("editarCantidad").value = producto.cantidad;
     aplicarUnidadSeleccionada("editarUnidad", "editarUnidadPersonalizada", producto.unidad);
     document.getElementById("editarPrecio").value = producto.precio;
@@ -296,13 +322,14 @@ function guardarEdicionProducto() {
         return;
     }
 
-    const descripcion = document.getElementById("editarDescripcion").value.trim();
+    const titulo = document.getElementById("editarTitulo").value.trim();
+    const subtitulo = document.getElementById("editarSubtitulo").value.trim();
     const cantidad = Number.parseFloat(document.getElementById("editarCantidad").value);
     const precio = Number.parseFloat(document.getElementById("editarPrecio").value);
     const unidad = leerUnidadSeleccionada("editarUnidad", "editarUnidadPersonalizada");
 
-    if (!descripcion || !Number.isFinite(cantidad) || !Number.isFinite(precio) || cantidad <= 0 || precio <= 0) {
-        alert("Complete descripción, cantidad y precio con valores válidos.");
+    if (!titulo || !Number.isFinite(cantidad) || !Number.isFinite(precio) || cantidad <= 0 || precio <= 0) {
+        alert("Complete producto, cantidad y precio con valores válidos.");
         return;
     }
 
@@ -316,7 +343,9 @@ function guardarEdicionProducto() {
         return;
     }
 
-    productos[indice].descripcion = descripcion;
+    productos[indice].titulo = titulo;
+    productos[indice].subtitulo = subtitulo;
+    productos[indice].descripcion = titulo;
     productos[indice].cantidad = cantidad;
     productos[indice].unidad = unidad;
     productos[indice].precio = precio;
@@ -373,8 +402,24 @@ function renderizarTabla() {
 
         productosOpcion.forEach((producto) => {
             const tr = document.createElement("tr");
+            const tituloProducto = obtenerTituloProducto(producto);
+            const subtituloProducto = obtenerSubtituloProducto(producto);
+            const tituloSeguro = escaparHtml(tituloProducto);
+            const subtituloSeguro = escaparHtml(subtituloProducto);
+            const descripcionCelda = subtituloSeguro
+                ? `
+                    <div class="descripcion-producto">
+                        <div class="descripcion-producto-titulo">${tituloSeguro}</div>
+                        <div class="descripcion-producto-subtitulo">${subtituloSeguro}</div>
+                    </div>
+                `
+                : `
+                    <div class="descripcion-producto">
+                        <div class="descripcion-producto-titulo">${tituloSeguro}</div>
+                    </div>
+                `;
             const imagenCelda = producto.imagen
-                ? `<img src="${producto.imagen}" alt="Imagen de ${producto.descripcion}" class="producto-img">`
+                ? `<img src="${producto.imagen}" alt="Imagen de ${tituloSeguro || "producto"}" class="producto-img">`
                 : '<span class="text-muted">Sin imagen</span>';
             const unidadTexto = producto.unidad ? ` ${producto.unidad}` : "";
             const botonEditar = `
@@ -384,7 +429,7 @@ function renderizarTabla() {
             `;
 
             tr.innerHTML = `
-                <td>${producto.descripcion}</td>
+                <td>${descripcionCelda}</td>
                 <td class="text-center">${formatoNumero(producto.cantidad)}${unidadTexto}</td>
                 <td class="text-end">${formatoPeso(producto.precio)}</td>
                 <td class="text-end">${formatoPeso(producto.subtotal)}</td>
