@@ -533,7 +533,7 @@ function renderizarTabla() {
                 <td class="text-center">${formatoNumero(producto.cantidad)}${unidadTexto}</td>
                 <td class="text-end">${formatoPeso(producto.precio)}</td>
                 <td class="text-end">${formatoPeso(producto.subtotal)}</td>
-                ${mostrarColumnaImagen ? `<td class="text-center">${imagenCelda}</td>` : ""}
+                ${mostrarColumnaImagen ? `<td class="text-center columna-imagen-celda">${imagenCelda}</td>` : ""}
                 <td class="text-center">
                     ${botonEditar}
                     <button class="btn btn-sm btn-danger" onclick="eliminarProducto(${producto.id})">
