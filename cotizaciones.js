@@ -303,7 +303,12 @@ function aplicarDescuentoOpcionUnica() {
     actualizarDescuentoOpcion(opcion, valor);
 }
 
-function calcularResumenOpcion(productosOpcion, opcion) {
+function estaIvaAplicado() {
+    const ivaCheckbox = document.getElementById("aplicarIva");
+    return ivaCheckbox ? ivaCheckbox.checked : ivaActivo;
+}
+
+function calcularResumenOpcion(productosOpcion, opcion, aplicarIvaFlag = false) {
     const productosConDescuento = productosOpcion.filter(
         (producto) => !esProductoSinDescuento(producto)
     );
@@ -316,12 +321,16 @@ function calcularResumenOpcion(productosOpcion, opcion) {
     const subtotal = subtotalConDescuento + subtotalSinDescuento;
     const descuentoPorcentaje = obtenerDescuentoOpcion(opcion);
     const valorDescuento = subtotalConDescuento * (descuentoPorcentaje / 100);
-    const total = subtotalConDescuento - valorDescuento + subtotalSinDescuento;
+    const totalSinIva = subtotalConDescuento - valorDescuento + subtotalSinDescuento;
+    const valorIva = aplicarIvaFlag ? totalSinIva * 0.19 : 0;
+    const total = totalSinIva + valorIva;
 
     return {
         subtotal,
         descuentoPorcentaje,
         valorDescuento,
+        valorIva,
+        totalSinIva,
         total
     };
 }
@@ -329,6 +338,7 @@ function calcularResumenOpcion(productosOpcion, opcion) {
 function aplicarIva() {
     const ivaCheckbox = document.getElementById("aplicarIva");
     ivaActivo = ivaCheckbox ? ivaCheckbox.checked : false;
+    renderizarTabla();
     calcularTotales();
 }
 
@@ -427,9 +437,10 @@ function renderizarTabla() {
     const opciones = agruparPorOpcion(productos);
     const llaves = Object.keys(opciones).sort((a, b) => Number(a) - Number(b));
     const numeroOpciones = llaves.length;
+    const aplicarIvaFlag = estaIvaAplicado();
     llaves.forEach((opcion) => {
         const productosOpcion = opciones[opcion];
-        const resumenOpcion = calcularResumenOpcion(productosOpcion, opcion);
+        const resumenOpcion = calcularResumenOpcion(productosOpcion, opcion, aplicarIvaFlag);
         if (numeroOpciones > 1) {
             const trHeader = document.createElement("tr");
             trHeader.innerHTML = `
@@ -501,16 +512,25 @@ function renderizarTabla() {
         });
 
         if (numeroOpciones > 1) {
+            const mostrarDetalle = resumenOpcion.valorDescuento > 0 || resumenOpcion.valorIva > 0;
+            const resumenPills = [];
+            if (mostrarDetalle) {
+                resumenPills.push(`<span class="opcion-pill">Subtotal: ${formatoPeso(resumenOpcion.subtotal)}</span>`);
+            }
+            if (resumenOpcion.valorDescuento > 0) {
+                resumenPills.push(`<span class="opcion-pill opcion-pill-danger">Desc. ${formatoNumero(resumenOpcion.descuentoPorcentaje)}%: -${formatoPeso(resumenOpcion.valorDescuento)}</span>`);
+            }
+            if (resumenOpcion.valorIva > 0) {
+                resumenPills.push(`<span class="opcion-pill opcion-pill-iva">IVA 19%: +${formatoPeso(resumenOpcion.valorIva)}</span>`);
+            }
+            const resumenPillsHtml = resumenPills.length > 0
+                ? `<div class="opcion-resumen-inline">${resumenPills.join("")}</div>`
+                : "";
             const trResumen = document.createElement("tr");
             trResumen.className = "opcion-resumen-row";
             trResumen.innerHTML = `
-                <td colspan="3" class="text-end">
-                    <div class="opcion-resumen-inline">
-                        <span class="opcion-pill">Subtotal: ${formatoPeso(resumenOpcion.subtotal)}</span>
-                        <span class="opcion-pill opcion-pill-danger">Desc. ${formatoNumero(resumenOpcion.descuentoPorcentaje)}%: -${formatoPeso(resumenOpcion.valorDescuento)}</span>
-                    </div>
-                </td>
-                <td class="text-end fw-bold">Total: ${formatoPeso(resumenOpcion.total)}</td>
+                <td colspan="3" class="text-end">${resumenPillsHtml}</td>
+                <td class="text-end fw-bold">${aplicarIvaFlag ? "Total + IVA" : "Total"}: ${formatoPeso(resumenOpcion.total)}</td>
                 ${mostrarColumnaImagen ? "<td></td>" : ""}
                 <td></td>
             `;
@@ -545,13 +565,11 @@ function calcularTotales() {
 
     totalesGenerales.style.display = "block";
     const opcionUnica = Object.keys(opciones)[0] || "1";
-    const resumen = calcularResumenOpcion(opciones[opcionUnica] || [], opcionUnica);
+    const aplicarIvaFlag = estaIvaAplicado();
+    const resumen = calcularResumenOpcion(opciones[opcionUnica] || [], opcionUnica, aplicarIvaFlag);
     const valorDescuento = resumen.valorDescuento;
-    const baseTotal = resumen.total;
-    const ivaCheckbox = document.getElementById("aplicarIva");
-    const aplicarIvaFlag = ivaCheckbox ? ivaCheckbox.checked : ivaActivo;
-    const valorIva = aplicarIvaFlag ? baseTotal * 0.19 : 0;
-    const total = baseTotal + valorIva;
+    const valorIva = resumen.valorIva;
+    const total = resumen.total;
 
     document.getElementById("subtotal").innerText = formatoPeso(resumen.subtotal);
     document.getElementById("descuentoValor").innerText = formatoPeso(valorDescuento);
