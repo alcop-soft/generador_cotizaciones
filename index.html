@@ -204,7 +204,39 @@
     }
 
     .descuento-opcion-control {
-        min-width: 220px;
+        min-width: 170px;
+    }
+
+    .opcion-header-cell {
+        background: #f8fafc;
+    }
+
+    .opcion-resumen-row td {
+        background: #fcfcfd;
+    }
+
+    .opcion-resumen-inline {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .opcion-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 8px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        border: 1px solid #e4e7ec;
+        color: #344054;
+        background: #fff;
+    }
+
+    .opcion-pill.opcion-pill-danger {
+        color: #b42318;
+        border-color: #fecdca;
+        background: #fef3f2;
     }
 
     .lineas-decorativas {
@@ -470,7 +502,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Descuento por opción</label>
-                    <div class="form-text">Ingrese el descuento dentro de cada encabezado de opción en la tabla.</div>
+                    <div class="form-text">Si hay varias opciones, ingréselo en el encabezado de cada opción dentro de la tabla.</div>
                     <div class="form-check mt-2">
                         <input class="form-check-input" type="checkbox" id="aplicarIva">
                         <label class="form-check-label" for="aplicarIva">Aplicar IVA 19%</label>
@@ -534,6 +566,10 @@
                 </div>
         <div class="col-md-6">
             <div class="border rounded-2 p-3" id="totalesGenerales">
+                <div id="descuentoUnicoControl" class="mb-2 no-print">
+                    <label for="descuentoOpcionUnica" class="form-label fw-bold mb-1">Descuento (%)</label>
+                    <input type="number" id="descuentoOpcionUnica" class="form-control form-control-sm" placeholder="0" min="0" max="100" step="0.01">
+                </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span>Subtotal:</span>
                     <span id="subtotal" class="fw-bold">$0</span>

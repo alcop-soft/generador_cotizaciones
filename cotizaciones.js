@@ -174,6 +174,11 @@ document.addEventListener("DOMContentLoaded", () => {
         ivaCheckbox.addEventListener("change", aplicarIva);
     }
 
+    const descuentoOpcionUnicaInput = document.getElementById("descuentoOpcionUnica");
+    if (descuentoOpcionUnicaInput) {
+        descuentoOpcionUnicaInput.addEventListener("change", aplicarDescuentoOpcionUnica);
+    }
+
     const vendedorSelect = document.getElementById("vendedor");
     const vendedorOtroInput = document.getElementById("vendedorOtro");
     if (vendedorSelect) {
@@ -288,6 +293,14 @@ function actualizarDescuentoOpcion(opcion, valor) {
     descuentosPorOpcion[key] = Number.isFinite(descuento) ? Math.max(0, Math.min(100, descuento)) : 0;
     renderizarTabla();
     calcularTotales();
+}
+
+function aplicarDescuentoOpcionUnica() {
+    const descuentoOpcionUnicaInput = document.getElementById("descuentoOpcionUnica");
+    const opciones = agruparPorOpcion(productos);
+    const opcion = Object.keys(opciones)[0] || String(tablaCounter || 1);
+    const valor = descuentoOpcionUnicaInput ? descuentoOpcionUnicaInput.value : 0;
+    actualizarDescuentoOpcion(opcion, valor);
 }
 
 function calcularResumenOpcion(productosOpcion, opcion) {
@@ -413,33 +426,35 @@ function renderizarTabla() {
 
     const opciones = agruparPorOpcion(productos);
     const llaves = Object.keys(opciones).sort((a, b) => Number(a) - Number(b));
+    const numeroOpciones = llaves.length;
     llaves.forEach((opcion) => {
         const productosOpcion = opciones[opcion];
         const resumenOpcion = calcularResumenOpcion(productosOpcion, opcion);
-        const trHeader = document.createElement("tr");
-        trHeader.innerHTML = `
-            <td colspan="${mostrarColumnaImagen ? 6 : 5}" class="bg-light">
-                <div class="d-flex flex-column flex-md-row gap-2 align-items-md-center justify-content-between">
-                    <span class="fw-bold">OPCIÓN ${opcion}</span>
-                    <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
-                        <span class="small text-muted">Descuento aplicado: ${formatoNumero(resumenOpcion.descuentoPorcentaje)}%</span>
-                        <div class="input-group input-group-sm no-print descuento-opcion-control">
-                            <span class="input-group-text">Descuento %</span>
-                            <input
-                                type="number"
-                                class="form-control"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                value="${resumenOpcion.descuentoPorcentaje}"
-                                onchange="actualizarDescuentoOpcion(${opcion}, this.value)"
-                            >
+        if (numeroOpciones > 1) {
+            const trHeader = document.createElement("tr");
+            trHeader.innerHTML = `
+                <td colspan="${mostrarColumnaImagen ? 6 : 5}" class="opcion-header-cell">
+                    <div class="d-flex flex-column flex-md-row gap-2 align-items-md-center justify-content-between">
+                        <span class="fw-bold">OPCIÓN ${opcion}</span>
+                        <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+                            <div class="input-group input-group-sm no-print descuento-opcion-control">
+                                <span class="input-group-text">Descuento %</span>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                    value="${resumenOpcion.descuentoPorcentaje}"
+                                    onchange="actualizarDescuentoOpcion(${opcion}, this.value)"
+                                >
+                            </div>
                         </div>
                     </div>
-                </div>
-            </td>
-        `;
-        tbody.appendChild(trHeader);
+                </td>
+            `;
+            tbody.appendChild(trHeader);
+        }
 
         productosOpcion.forEach((producto) => {
             const tr = document.createElement("tr");
@@ -485,32 +500,22 @@ function renderizarTabla() {
             tbody.appendChild(tr);
         });
 
-        const trSubtotal = document.createElement("tr");
-        trSubtotal.innerHTML = `
-            <td colspan="3" class="text-end fw-semibold">Subtotal opción ${opcion}:</td>
-            <td class="text-end">${formatoPeso(resumenOpcion.subtotal)}</td>
-            ${mostrarColumnaImagen ? "<td></td>" : ""}
-            <td></td>
-        `;
-        tbody.appendChild(trSubtotal);
-
-        const trDescuento = document.createElement("tr");
-        trDescuento.innerHTML = `
-            <td colspan="3" class="text-end text-danger fw-semibold">Descuento opción ${opcion} (${formatoNumero(resumenOpcion.descuentoPorcentaje)}%):</td>
-            <td class="text-end text-danger">-${formatoPeso(resumenOpcion.valorDescuento)}</td>
-            ${mostrarColumnaImagen ? "<td></td>" : ""}
-            <td></td>
-        `;
-        tbody.appendChild(trDescuento);
-
-        const trTotal = document.createElement("tr");
-        trTotal.innerHTML = `
-            <td colspan="3" class="text-end fw-bold">Total opción ${opcion}:</td>
-            <td class="text-end fw-bold">${formatoPeso(resumenOpcion.total)}</td>
-            ${mostrarColumnaImagen ? "<td></td>" : ""}
-            <td></td>
-        `;
-        tbody.appendChild(trTotal);
+        if (numeroOpciones > 1) {
+            const trResumen = document.createElement("tr");
+            trResumen.className = "opcion-resumen-row";
+            trResumen.innerHTML = `
+                <td colspan="3" class="text-end">
+                    <div class="opcion-resumen-inline">
+                        <span class="opcion-pill">Subtotal: ${formatoPeso(resumenOpcion.subtotal)}</span>
+                        <span class="opcion-pill opcion-pill-danger">Desc. ${formatoNumero(resumenOpcion.descuentoPorcentaje)}%: -${formatoPeso(resumenOpcion.valorDescuento)}</span>
+                    </div>
+                </td>
+                <td class="text-end fw-bold">Total: ${formatoPeso(resumenOpcion.total)}</td>
+                ${mostrarColumnaImagen ? "<td></td>" : ""}
+                <td></td>
+            `;
+            tbody.appendChild(trResumen);
+        }
     });
 }
 
@@ -550,6 +555,10 @@ function calcularTotales() {
 
     document.getElementById("subtotal").innerText = formatoPeso(resumen.subtotal);
     document.getElementById("descuentoValor").innerText = formatoPeso(valorDescuento);
+    const descuentoOpcionUnicaInput = document.getElementById("descuentoOpcionUnica");
+    if (descuentoOpcionUnicaInput) {
+        descuentoOpcionUnicaInput.value = resumen.descuentoPorcentaje;
+    }
     const ivaValor = document.getElementById("ivaValor");
     if (ivaValor) {
         ivaValor.innerText = formatoPeso(valorIva);
