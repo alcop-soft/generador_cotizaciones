@@ -67,7 +67,11 @@ const VENDEDORES = {
 };
 
 function leerImagenProducto() {
-    const inputImagen = document.getElementById("imagenProducto");
+    return leerImagenDesdeInput("imagenProducto");
+}
+
+function leerImagenDesdeInput(inputId) {
+    const inputImagen = document.getElementById(inputId);
     const archivo = inputImagen && inputImagen.files ? inputImagen.files[0] : null;
 
     if (!archivo) {
@@ -172,6 +176,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (ivaCheckbox) {
         ivaActivo = ivaCheckbox.checked;
         ivaCheckbox.addEventListener("change", aplicarIva);
+    }
+
+    const editarImagenProducto = document.getElementById("editarImagenProducto");
+    const quitarImagenEditar = document.getElementById("quitarImagenEditar");
+    if (editarImagenProducto && quitarImagenEditar) {
+        editarImagenProducto.addEventListener("change", () => {
+            if (editarImagenProducto.files && editarImagenProducto.files.length > 0) {
+                quitarImagenEditar.checked = false;
+            }
+        });
     }
 
     const descuentoOpcionUnicaInput = document.getElementById("descuentoOpcionUnica");
@@ -360,13 +374,21 @@ function abrirModalEdicion(id) {
     document.getElementById("editarCantidad").value = producto.cantidad;
     aplicarUnidadSeleccionada("editarUnidad", "editarUnidadPersonalizada", producto.unidad);
     document.getElementById("editarPrecio").value = producto.precio;
+    const editarImagenProducto = document.getElementById("editarImagenProducto");
+    const quitarImagenEditar = document.getElementById("quitarImagenEditar");
+    if (editarImagenProducto) {
+        editarImagenProducto.value = "";
+    }
+    if (quitarImagenEditar) {
+        quitarImagenEditar.checked = false;
+    }
 
     if (editarInstalacionModal) {
         editarInstalacionModal.show();
     }
 }
 
-function guardarEdicionProducto() {
+async function guardarEdicionProducto() {
     if (productoEditandoId === null) {
         return;
     }
@@ -392,6 +414,16 @@ function guardarEdicionProducto() {
         return;
     }
 
+    const nuevaImagen = await leerImagenDesdeInput("editarImagenProducto");
+    const quitarImagenEditar = document.getElementById("quitarImagenEditar");
+    const quitarImagen = quitarImagenEditar ? quitarImagenEditar.checked : false;
+    let imagenFinal = productos[indice].imagen || "";
+    if (nuevaImagen) {
+        imagenFinal = nuevaImagen;
+    } else if (quitarImagen) {
+        imagenFinal = "";
+    }
+
     productos[indice].titulo = titulo;
     productos[indice].subtitulo = subtitulo;
     productos[indice].descripcion = titulo;
@@ -399,6 +431,7 @@ function guardarEdicionProducto() {
     productos[indice].unidad = unidad;
     productos[indice].precio = precio;
     productos[indice].subtotal = cantidad * precio;
+    productos[indice].imagen = imagenFinal;
 
     renderizarTabla();
     calcularTotales();
