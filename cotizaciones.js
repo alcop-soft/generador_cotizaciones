@@ -618,7 +618,13 @@ function calcularTotales() {
     const subtotalSection = document.getElementById("subtotalSection");
     if (subtotalSection) {
         const mostrarSubtotal = Math.abs(resumen.subtotal - total) > 0.000001;
-        subtotalSection.style.display = mostrarSubtotal ? "flex" : "none";
+        if (mostrarSubtotal) {
+            subtotalSection.classList.add("d-flex");
+            subtotalSection.classList.remove("d-none");
+        } else {
+            subtotalSection.classList.remove("d-flex");
+            subtotalSection.classList.add("d-none");
+        }
     }
 
     const descuentoSection = document.getElementById("descuentoSection");
