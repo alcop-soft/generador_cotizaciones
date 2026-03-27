@@ -615,6 +615,11 @@ function calcularTotales() {
         ivaValor.innerText = formatoPeso(valorIva);
     }
     document.getElementById("totalGeneral").innerText = formatoPeso(total);
+    const subtotalSection = document.getElementById("subtotalSection");
+    if (subtotalSection) {
+        const mostrarSubtotal = Math.abs(resumen.subtotal - total) > 0.000001;
+        subtotalSection.style.display = mostrarSubtotal ? "flex" : "none";
+    }
 
     const descuentoSection = document.getElementById("descuentoSection");
     if (valorDescuento > 0) {
