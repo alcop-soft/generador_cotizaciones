@@ -13,6 +13,33 @@ function formatoNumero(valor) {
     }).format(valor);
 }
 
+const IVA_RATE = 0.19;
+
+function normalizarNumero(valor) {
+    const numero = Number.parseFloat(valor);
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function redondearMoneda(valor) {
+    return Math.round(normalizarNumero(valor) + Number.EPSILON);
+}
+
+function calcularSubtotal(cantidad, precio) {
+    return redondearMoneda(normalizarNumero(cantidad) * normalizarNumero(precio));
+}
+
+function obtenerSubtotalProducto(producto) {
+    if (!producto) {
+        return 0;
+    }
+
+    if (Number.isFinite(producto.subtotal)) {
+        return redondearMoneda(producto.subtotal);
+    }
+
+    return calcularSubtotal(producto.cantidad, producto.precio);
+}
+
 function normalizarTexto(texto) {
     return (texto || "")
         .toLowerCase()
@@ -53,7 +80,9 @@ function esProductoSinDescuento(producto) {
 let productos = [];
 let descuentosPorOpcion = {};
 let ivaActivo = false;
-let tablaCounter = 1;
+let opcionActual = 1;
+let ultimaOpcionCreada = 1;
+const opcionesCreadas = new Set([1]);
 let productoEditandoId = null;
 let editarInstalacionModal = null;
 const UNIDAD_DEFAULT = "Unidades";
@@ -145,6 +174,43 @@ function toggleVendedorOtro(selectEl, inputEl) {
     }
 }
 
+function obtenerOpcionesDisponibles() {
+    const opciones = new Set(opcionesCreadas);
+    productos.forEach((producto) => {
+        const opcion = Number.parseInt(producto.opcion, 10);
+        if (Number.isFinite(opcion) && opcion > 0) {
+            opciones.add(opcion);
+        }
+    });
+
+    return Array.from(opciones)
+        .filter((opcion) => Number.isFinite(opcion) && opcion > 0)
+        .sort((a, b) => a - b);
+}
+
+function sincronizarOpcionesDisponibles() {
+    const opcionActivaSelect = document.getElementById("opcionActiva");
+    const opciones = obtenerOpcionesDisponibles();
+    const opcionMayor = opciones.length > 0 ? opciones[opciones.length - 1] : 1;
+    if (opcionMayor > ultimaOpcionCreada) {
+        ultimaOpcionCreada = opcionMayor;
+    }
+
+    if (!opciones.includes(opcionActual)) {
+        opcionActual = opciones[0] || 1;
+    }
+
+    if (!opcionActivaSelect) {
+        return;
+    }
+
+    opcionActivaSelect.innerHTML = opciones
+        .map((opcion) => `<option value="${opcion}">Opción ${opcion}</option>`)
+        .join("");
+
+    opcionActivaSelect.value = String(opcionActual);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const fecha = new Date();
     const opcionesFecha = { day: "numeric", month: "long", year: "numeric" };
@@ -230,6 +296,17 @@ document.addEventListener("DOMContentLoaded", () => {
         editarInstalacionModal = new window.bootstrap.Modal(modalElement);
     }
 
+    const opcionActivaSelect = document.getElementById("opcionActiva");
+    if (opcionActivaSelect) {
+        opcionActivaSelect.addEventListener("change", () => {
+            const opcionSeleccionada = Number.parseInt(opcionActivaSelect.value, 10);
+            if (Number.isFinite(opcionSeleccionada) && opcionSeleccionada > 0) {
+                opcionActual = opcionSeleccionada;
+            }
+        });
+    }
+
+    sincronizarOpcionesDisponibles();
     actualizarSaludo();
     actualizarNombreVendedor();
     actualizarNotaRapida();
@@ -256,7 +333,7 @@ async function agregarProducto() {
         return;
     }
 
-    const subtotal = cantidad * precio;
+    const subtotal = calcularSubtotal(cantidad, precio);
 
     productos.push({
         id: Date.now() + Math.floor(Math.random() * 1000),
@@ -268,8 +345,9 @@ async function agregarProducto() {
         precio,
         subtotal,
         imagen,
-        opcion: tablaCounter
+        opcion: opcionActual
     });
+    opcionesCreadas.add(opcionActual);
 
     document.getElementById("nombreCliente").innerText = cliente;
     renderizarTabla();
@@ -312,7 +390,7 @@ function actualizarDescuentoOpcion(opcion, valor) {
 function aplicarDescuentoOpcionUnica() {
     const descuentoOpcionUnicaInput = document.getElementById("descuentoOpcionUnica");
     const opciones = agruparPorOpcion(productos);
-    const opcion = Object.keys(opciones)[0] || String(tablaCounter || 1);
+    const opcion = Object.keys(opciones)[0] || String(opcionActual || 1);
     const valor = descuentoOpcionUnicaInput ? descuentoOpcionUnicaInput.value : 0;
     actualizarDescuentoOpcion(opcion, valor);
 }
@@ -330,14 +408,18 @@ function calcularResumenOpcion(productosOpcion, opcion, aplicarIvaFlag = false) 
         (producto) => esProductoSinDescuento(producto)
     );
 
-    const subtotalConDescuento = productosConDescuento.reduce((acc, producto) => acc + producto.subtotal, 0);
-    const subtotalSinDescuento = productosSinDescuento.reduce((acc, producto) => acc + producto.subtotal, 0);
-    const subtotal = subtotalConDescuento + subtotalSinDescuento;
+    const subtotalConDescuento = redondearMoneda(
+        productosConDescuento.reduce((acc, producto) => acc + obtenerSubtotalProducto(producto), 0)
+    );
+    const subtotalSinDescuento = redondearMoneda(
+        productosSinDescuento.reduce((acc, producto) => acc + obtenerSubtotalProducto(producto), 0)
+    );
+    const subtotal = redondearMoneda(subtotalConDescuento + subtotalSinDescuento);
     const descuentoPorcentaje = obtenerDescuentoOpcion(opcion);
-    const valorDescuento = subtotalConDescuento * (descuentoPorcentaje / 100);
-    const totalSinIva = subtotalConDescuento - valorDescuento + subtotalSinDescuento;
-    const valorIva = aplicarIvaFlag ? totalSinIva * 0.19 : 0;
-    const total = totalSinIva + valorIva;
+    const valorDescuento = redondearMoneda(subtotalConDescuento * (descuentoPorcentaje / 100));
+    const totalSinIva = redondearMoneda(subtotalConDescuento - valorDescuento + subtotalSinDescuento);
+    const valorIva = aplicarIvaFlag ? redondearMoneda(totalSinIva * IVA_RATE) : 0;
+    const total = redondearMoneda(totalSinIva + valorIva);
 
     return {
         subtotal,
@@ -430,7 +512,7 @@ async function guardarEdicionProducto() {
     productos[indice].cantidad = cantidad;
     productos[indice].unidad = unidad;
     productos[indice].precio = precio;
-    productos[indice].subtotal = cantidad * precio;
+    productos[indice].subtotal = calcularSubtotal(cantidad, precio);
     productos[indice].imagen = imagenFinal;
 
     renderizarTabla();
@@ -444,14 +526,18 @@ async function guardarEdicionProducto() {
 }
 
 function agregarNuevaTabla() {
-    tablaCounter += 1;
-    alert(`Nueva opción ${tablaCounter} creada. Los siguientes productos pertenecerán a esta opción.`);
+    ultimaOpcionCreada += 1;
+    opcionActual = ultimaOpcionCreada;
+    opcionesCreadas.add(opcionActual);
+    sincronizarOpcionesDisponibles();
+    alert(`Nueva opción ${opcionActual} creada. Los siguientes productos pertenecerán a esta opción.`);
 }
 
 function renderizarTabla() {
     const tbody = document.getElementById("tablaBody");
     const columnaImagen = document.getElementById("columnaImagen");
     const mostrarColumnaImagen = productos.some((producto) => Boolean(producto.imagen));
+    sincronizarOpcionesDisponibles();
 
     tbody.innerHTML = "";
     if (columnaImagen) {
@@ -502,6 +588,8 @@ function renderizarTabla() {
 
         productosOpcion.forEach((producto) => {
             const tr = document.createElement("tr");
+            const subtotalProducto = obtenerSubtotalProducto(producto);
+            producto.subtotal = subtotalProducto;
             const tituloProducto = obtenerTituloProducto(producto);
             const subtituloProducto = obtenerSubtituloProducto(producto);
             const tituloSeguro = escaparHtml(tituloProducto);
@@ -532,7 +620,7 @@ function renderizarTabla() {
                 <td>${descripcionCelda}</td>
                 <td class="text-center">${formatoNumero(producto.cantidad)}${unidadTexto}</td>
                 <td class="text-end">${formatoPeso(producto.precio)}</td>
-                <td class="text-end">${formatoPeso(producto.subtotal)}</td>
+                <td class="text-end">${formatoPeso(subtotalProducto)}</td>
                 ${mostrarColumnaImagen ? `<td class="text-center columna-imagen-celda">${imagenCelda}</td>` : ""}
                 <td class="text-center">
                     ${botonEditar}
