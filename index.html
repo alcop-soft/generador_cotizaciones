@@ -528,11 +528,7 @@
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Descuento por opción</label>
-                    <div class="form-text">Si hay varias opciones, ingréselo en el encabezado de cada opción dentro de la tabla.</div>
-                    <div class="form-check mt-2">
-                        <input class="form-check-input" type="checkbox" id="aplicarIva">
-                        <label class="form-check-label" for="aplicarIva">Aplicar IVA 19%</label>
-                    </div>
+                    <div class="form-text">Si hay varias opciones, configure descuento e IVA en el encabezado de cada opción dentro de la tabla.</div>
                 </div>
                 <div class="col-md-4 d-flex align-items-end">
                     <button id="generarPDF" class="btn btn-primary w-100">
@@ -595,6 +591,10 @@
                 <div id="descuentoUnicoControl" class="mb-2 no-print">
                     <label for="descuentoOpcionUnica" class="form-label fw-bold mb-1">Descuento (%)</label>
                     <input type="number" id="descuentoOpcionUnica" class="form-control form-control-sm" placeholder="0" min="0" max="100" step="0.01">
+                </div>
+                <div id="ivaOpcionUnicaControl" class="form-check mb-2 no-print">
+                    <input class="form-check-input" type="checkbox" id="aplicarIvaOpcionUnica">
+                    <label class="form-check-label" for="aplicarIvaOpcionUnica">Aplicar IVA 19%</label>
                 </div>
                 <div id="subtotalSection" class="d-flex justify-content-between mb-2">
                     <span>Subtotal:</span>

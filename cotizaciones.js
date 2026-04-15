@@ -79,7 +79,7 @@ function esProductoSinDescuento(producto) {
 
 let productos = [];
 let descuentosPorOpcion = {};
-let ivaActivo = false;
+let ivaPorOpcion = {};
 let opcionActual = 1;
 let ultimaOpcionCreada = 1;
 const opcionesCreadas = new Set([1]);
@@ -238,12 +238,6 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleUnidadPersonalizada(editarUnidadSelect, editarUnidadPersonalizada);
     }
 
-    const ivaCheckbox = document.getElementById("aplicarIva");
-    if (ivaCheckbox) {
-        ivaActivo = ivaCheckbox.checked;
-        ivaCheckbox.addEventListener("change", aplicarIva);
-    }
-
     const editarImagenProducto = document.getElementById("editarImagenProducto");
     const quitarImagenEditar = document.getElementById("quitarImagenEditar");
     if (editarImagenProducto && quitarImagenEditar) {
@@ -257,6 +251,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const descuentoOpcionUnicaInput = document.getElementById("descuentoOpcionUnica");
     if (descuentoOpcionUnicaInput) {
         descuentoOpcionUnicaInput.addEventListener("change", aplicarDescuentoOpcionUnica);
+    }
+
+    const ivaOpcionUnicaCheckbox = document.getElementById("aplicarIvaOpcionUnica");
+    if (ivaOpcionUnicaCheckbox) {
+        ivaOpcionUnicaCheckbox.addEventListener("change", aplicarIvaOpcionUnica);
     }
 
     const vendedorSelect = document.getElementById("vendedor");
@@ -395,12 +394,26 @@ function aplicarDescuentoOpcionUnica() {
     actualizarDescuentoOpcion(opcion, valor);
 }
 
-function estaIvaAplicado() {
-    const ivaCheckbox = document.getElementById("aplicarIva");
-    return ivaCheckbox ? ivaCheckbox.checked : ivaActivo;
+function estaIvaAplicadoOpcion(opcion) {
+    const key = String(opcion);
+    return Boolean(ivaPorOpcion[key]);
 }
 
-function calcularResumenOpcion(productosOpcion, opcion, aplicarIvaFlag = false) {
+function actualizarIvaOpcion(opcion, aplicar) {
+    const key = String(opcion);
+    ivaPorOpcion[key] = Boolean(aplicar);
+    renderizarTabla();
+    calcularTotales();
+}
+
+function aplicarIvaOpcionUnica() {
+    const ivaOpcionUnicaCheckbox = document.getElementById("aplicarIvaOpcionUnica");
+    const opciones = agruparPorOpcion(productos);
+    const opcion = Object.keys(opciones)[0] || String(opcionActual || 1);
+    actualizarIvaOpcion(opcion, ivaOpcionUnicaCheckbox ? ivaOpcionUnicaCheckbox.checked : false);
+}
+
+function calcularResumenOpcion(productosOpcion, opcion) {
     const productosConDescuento = productosOpcion.filter(
         (producto) => !esProductoSinDescuento(producto)
     );
@@ -418,24 +431,19 @@ function calcularResumenOpcion(productosOpcion, opcion, aplicarIvaFlag = false) 
     const descuentoPorcentaje = obtenerDescuentoOpcion(opcion);
     const valorDescuento = redondearMoneda(subtotalConDescuento * (descuentoPorcentaje / 100));
     const totalSinIva = redondearMoneda(subtotalConDescuento - valorDescuento + subtotalSinDescuento);
-    const valorIva = aplicarIvaFlag ? redondearMoneda(totalSinIva * IVA_RATE) : 0;
+    const ivaAplicado = estaIvaAplicadoOpcion(opcion);
+    const valorIva = ivaAplicado ? redondearMoneda(totalSinIva * IVA_RATE) : 0;
     const total = redondearMoneda(totalSinIva + valorIva);
 
     return {
         subtotal,
         descuentoPorcentaje,
         valorDescuento,
+        ivaAplicado,
         valorIva,
         totalSinIva,
         total
     };
-}
-
-function aplicarIva() {
-    const ivaCheckbox = document.getElementById("aplicarIva");
-    ivaActivo = ivaCheckbox ? ivaCheckbox.checked : false;
-    renderizarTabla();
-    calcularTotales();
 }
 
 function eliminarProducto(id) {
@@ -556,10 +564,9 @@ function renderizarTabla() {
     const opciones = agruparPorOpcion(productos);
     const llaves = Object.keys(opciones).sort((a, b) => Number(a) - Number(b));
     const numeroOpciones = llaves.length;
-    const aplicarIvaFlag = estaIvaAplicado();
     llaves.forEach((opcion) => {
         const productosOpcion = opciones[opcion];
-        const resumenOpcion = calcularResumenOpcion(productosOpcion, opcion, aplicarIvaFlag);
+        const resumenOpcion = calcularResumenOpcion(productosOpcion, opcion);
         if (numeroOpciones > 1) {
             const trHeader = document.createElement("tr");
             trHeader.innerHTML = `
@@ -578,6 +585,18 @@ function renderizarTabla() {
                                     value="${resumenOpcion.descuentoPorcentaje}"
                                     onchange="actualizarDescuentoOpcion(${opcion}, this.value)"
                                 >
+                            </div>
+                            <div class="form-check no-print">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    id="ivaOpcion${opcion}"
+                                    ${resumenOpcion.ivaAplicado ? "checked" : ""}
+                                    onchange="actualizarIvaOpcion(${opcion}, this.checked)"
+                                >
+                                <label class="form-check-label small" for="ivaOpcion${opcion}">
+                                    Aplicar IVA 19%
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -651,7 +670,7 @@ function renderizarTabla() {
             trResumen.className = "opcion-resumen-row";
             trResumen.innerHTML = `
                 <td colspan="3" class="text-end">${resumenPillsHtml}</td>
-                <td class="text-end fw-bold">${aplicarIvaFlag ? "Total + IVA" : "Total"}: ${formatoPeso(resumenOpcion.total)}</td>
+                <td class="text-end fw-bold">${resumenOpcion.ivaAplicado ? "Total + IVA" : "Total"}: ${formatoPeso(resumenOpcion.total)}</td>
                 ${mostrarColumnaImagen ? "<td></td>" : ""}
                 <td></td>
             `;
@@ -686,8 +705,7 @@ function calcularTotales() {
 
     totalesGenerales.style.display = "block";
     const opcionUnica = Object.keys(opciones)[0] || "1";
-    const aplicarIvaFlag = estaIvaAplicado();
-    const resumen = calcularResumenOpcion(opciones[opcionUnica] || [], opcionUnica, aplicarIvaFlag);
+    const resumen = calcularResumenOpcion(opciones[opcionUnica] || [], opcionUnica);
     const valorDescuento = resumen.valorDescuento;
     const valorIva = resumen.valorIva;
     const total = resumen.total;
@@ -701,6 +719,10 @@ function calcularTotales() {
     const ivaValor = document.getElementById("ivaValor");
     if (ivaValor) {
         ivaValor.innerText = formatoPeso(valorIva);
+    }
+    const ivaOpcionUnicaCheckbox = document.getElementById("aplicarIvaOpcionUnica");
+    if (ivaOpcionUnicaCheckbox) {
+        ivaOpcionUnicaCheckbox.checked = resumen.ivaAplicado;
     }
     document.getElementById("totalGeneral").innerText = formatoPeso(total);
     const subtotalSection = document.getElementById("subtotalSection");
@@ -724,7 +746,7 @@ function calcularTotales() {
 
     const ivaSection = document.getElementById("ivaSection");
     if (ivaSection) {
-        if (aplicarIvaFlag) {
+        if (resumen.ivaAplicado) {
             ivaSection.classList.add("visible");
         } else {
             ivaSection.classList.remove("visible");
