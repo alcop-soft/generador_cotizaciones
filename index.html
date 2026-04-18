@@ -200,11 +200,10 @@
 
     .descuento-section {
         display: none;
-        justify-content: space-between;
     }
 
     .descuento-section.visible {
-        display: flex;
+        display: block;
     }
 
     .iva-section {
@@ -230,32 +229,164 @@
 
     .opcion-resumen-inline {
         display: flex;
-        justify-content: flex-end;
+        flex-direction: column;
+        align-items: flex-end;
         gap: 8px;
-        flex-wrap: wrap;
     }
 
-    .opcion-pill {
-        display: inline-flex;
+    .opcion-resumen-card {
+        min-width: 220px;
+        max-width: 100%;
+        border: 1px solid #d0d5dd;
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: #fff;
+        text-align: left;
+    }
+
+    .opcion-resumen-card-label {
+        display: block;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #667085;
+        margin-bottom: 2px;
+    }
+
+    .opcion-resumen-card-value {
+        font-weight: 700;
+        color: var(--brand-strong);
+    }
+
+    .opcion-resumen-card-descuento {
+        border-color: #fecdca;
+        background: linear-gradient(135deg, #fff7ed 0%, #fef3f2 100%);
+        box-shadow: 0 8px 18px rgba(180, 35, 24, 0.08);
+    }
+
+    .opcion-resumen-card-descuento .opcion-resumen-card-label {
+        color: #b42318;
+    }
+
+    .opcion-resumen-card-descuento .opcion-resumen-card-value {
+        color: #912018;
+        font-size: 1.02rem;
+    }
+
+    .opcion-resumen-card-iva {
+        border-color: #b2ddff;
+        background: #eff8ff;
+    }
+
+    .totales-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px;
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .precio-base-section {
         align-items: center;
-        padding: 3px 8px;
-        border-radius: 999px;
-        font-size: 0.78rem;
-        border: 1px solid #e4e7ec;
-        color: #344054;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 1px solid #d0d5dd;
+        border-radius: 12px;
         background: #fff;
     }
 
-    .opcion-pill.opcion-pill-danger {
-        color: #b42318;
-        border-color: #fecdca;
-        background: #fef3f2;
+    .precio-base-label {
+        display: block;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #667085;
+        margin-bottom: 2px;
     }
 
-    .opcion-pill.opcion-pill-iva {
-        color: #175cd3;
-        border-color: #b2ddff;
-        background: #eff8ff;
+    .precio-base-helper {
+        font-size: 0.92rem;
+        color: var(--ink-soft);
+    }
+
+    .precio-base-valor {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--brand-strong);
+    }
+
+    .precio-base-section.tiene-descuento .precio-base-valor {
+        color: #667085;
+        text-decoration: line-through;
+        text-decoration-thickness: 2px;
+    }
+
+    .descuento-highlight {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        border: 1px solid #fecdca;
+        border-radius: 14px;
+        padding: 14px 16px;
+        background: linear-gradient(135deg, #fff7ed 0%, #fef3f2 100%);
+        box-shadow: 0 12px 22px rgba(180, 35, 24, 0.12);
+    }
+
+    .descuento-highlight-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .descuento-badge {
+        display: inline-flex;
+        align-self: flex-start;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid #fda29b;
+        color: #b42318;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .descuento-titulo {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #912018;
+    }
+
+    .descuento-subtitulo {
+        font-size: 0.88rem;
+        color: #7a271a;
+    }
+
+    .descuento-highlight-amount {
+        text-align: right;
+    }
+
+    .descuento-highlight-label {
+        display: block;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #b42318;
+        margin-bottom: 2px;
+    }
+
+    .descuento-highlight-value {
+        font-size: 1.4rem;
+        line-height: 1;
+        font-weight: 800;
+        color: #912018;
+    }
+
+    .resumen-divider {
+        border-top: 1px dashed #d0d5dd;
+        margin: 14px 0 12px;
     }
 
     .lineas-decorativas {
@@ -290,6 +421,23 @@
 
         .logo {
             max-height: 56px;
+        }
+
+        .descuento-highlight {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .descuento-highlight-amount {
+            text-align: left;
+        }
+
+        .opcion-resumen-inline {
+            align-items: stretch;
+        }
+
+        .opcion-resumen-card {
+            min-width: 100%;
         }
     }
 
@@ -333,7 +481,7 @@
         }
 
         .descuento-section.visible {
-            display: flex !important;
+            display: block !important;
         }
 
         .iva-section {
@@ -409,6 +557,14 @@
         .nota-rapida-texto {
             font-size: 0.78rem;
             line-height: 1.2;
+        }
+
+        .totales-card {
+            box-shadow: none;
+        }
+
+        .descuento-highlight {
+            box-shadow: none;
         }
     }
 </style>
@@ -587,7 +743,7 @@
                     </div>
                 </div>
         <div class="col-md-6">
-            <div class="border rounded-2 p-3" id="totalesGenerales">
+            <div class="totales-card" id="totalesGenerales">
                 <div id="descuentoUnicoControl" class="mb-2 no-print">
                     <label for="descuentoOpcionUnica" class="form-label fw-bold mb-1">Descuento (%)</label>
                     <input type="number" id="descuentoOpcionUnica" class="form-control form-control-sm" placeholder="0" min="0" max="100" step="0.01">
@@ -596,14 +752,27 @@
                     <input class="form-check-input" type="checkbox" id="aplicarIvaOpcionUnica">
                     <label class="form-check-label" for="aplicarIvaOpcionUnica">Aplicar IVA 19%</label>
                 </div>
-                <div id="subtotalSection" class="d-flex justify-content-between mb-2">
-                    <span>Subtotal:</span>
-                    <span id="subtotal" class="fw-bold">$0</span>
+                <div id="subtotalSection" class="d-flex justify-content-between mb-2 precio-base-section">
+                    <div>
+                        <span class="precio-base-label">Precio original</span>
+                        <span class="precio-base-helper">Valor antes del descuento</span>
+                    </div>
+                    <span id="subtotal" class="precio-base-valor">$0</span>
                 </div>
                 <div id="descuentoSection" class="mb-2 descuento-section">
-                    <span>Descuento:</span>
-                    <span id="descuentoValor" class="fw-bold text-danger">$0</span>
+                    <div class="descuento-highlight">
+                        <div class="descuento-highlight-copy">
+                            <span id="descuentoBadge" class="descuento-badge">0% OFF</span>
+                            <span class="descuento-titulo">Descuento aplicado</span>
+                            <span id="descuentoSubtitulo" class="descuento-subtitulo">Ahorro sobre el precio original</span>
+                        </div>
+                        <div class="descuento-highlight-amount">
+                            <span class="descuento-highlight-label">Ahorro</span>
+                            <span id="descuentoValor" class="descuento-highlight-value">$0</span>
+                        </div>
+                    </div>
                 </div>
+                <div class="resumen-divider"></div>
                 <div id="ivaSection" class="mb-2 iva-section">
                     <span>IVA (19%):</span>
                     <span id="ivaValor" class="fw-bold">$0</span>

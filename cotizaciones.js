@@ -655,13 +655,28 @@ function renderizarTabla() {
             const mostrarDetalle = resumenOpcion.valorDescuento > 0 || resumenOpcion.valorIva > 0;
             const resumenPills = [];
             if (mostrarDetalle) {
-                resumenPills.push(`<span class="opcion-pill">Subtotal: ${formatoPeso(resumenOpcion.subtotal)}</span>`);
+                resumenPills.push(`
+                    <div class="opcion-resumen-card">
+                        <span class="opcion-resumen-card-label">Precio original</span>
+                        <span class="opcion-resumen-card-value">${formatoPeso(resumenOpcion.subtotal)}</span>
+                    </div>
+                `);
             }
             if (resumenOpcion.valorDescuento > 0) {
-                resumenPills.push(`<span class="opcion-pill opcion-pill-danger">Desc. ${formatoNumero(resumenOpcion.descuentoPorcentaje)}%: -${formatoPeso(resumenOpcion.valorDescuento)}</span>`);
+                resumenPills.push(`
+                    <div class="opcion-resumen-card opcion-resumen-card-descuento">
+                        <span class="opcion-resumen-card-label">Descuento ${formatoNumero(resumenOpcion.descuentoPorcentaje)}%</span>
+                        <span class="opcion-resumen-card-value">Ahorro: -${formatoPeso(resumenOpcion.valorDescuento)}</span>
+                    </div>
+                `);
             }
             if (resumenOpcion.valorIva > 0) {
-                resumenPills.push(`<span class="opcion-pill opcion-pill-iva">IVA 19%: +${formatoPeso(resumenOpcion.valorIva)}</span>`);
+                resumenPills.push(`
+                    <div class="opcion-resumen-card opcion-resumen-card-iva">
+                        <span class="opcion-resumen-card-label">IVA 19%</span>
+                        <span class="opcion-resumen-card-value">+${formatoPeso(resumenOpcion.valorIva)}</span>
+                    </div>
+                `);
             }
             const resumenPillsHtml = resumenPills.length > 0
                 ? `<div class="opcion-resumen-inline">${resumenPills.join("")}</div>`
@@ -712,6 +727,16 @@ function calcularTotales() {
 
     document.getElementById("subtotal").innerText = formatoPeso(resumen.subtotal);
     document.getElementById("descuentoValor").innerText = formatoPeso(valorDescuento);
+    const descuentoBadge = document.getElementById("descuentoBadge");
+    if (descuentoBadge) {
+        descuentoBadge.innerText = `${formatoNumero(resumen.descuentoPorcentaje)}% OFF`;
+    }
+    const descuentoSubtitulo = document.getElementById("descuentoSubtitulo");
+    if (descuentoSubtitulo) {
+        descuentoSubtitulo.innerText = valorDescuento > 0
+            ? `Ahorras ${formatoPeso(valorDescuento)} sobre el precio original`
+            : "Ahorro sobre el precio original";
+    }
     const descuentoOpcionUnicaInput = document.getElementById("descuentoOpcionUnica");
     if (descuentoOpcionUnicaInput) {
         descuentoOpcionUnicaInput.value = resumen.descuentoPorcentaje;
@@ -727,21 +752,18 @@ function calcularTotales() {
     document.getElementById("totalGeneral").innerText = formatoPeso(total);
     const subtotalSection = document.getElementById("subtotalSection");
     if (subtotalSection) {
-        const mostrarSubtotal = Math.abs(resumen.subtotal - total) > 0.000001;
-        if (mostrarSubtotal) {
-            subtotalSection.classList.add("d-flex");
-            subtotalSection.classList.remove("d-none");
-        } else {
-            subtotalSection.classList.remove("d-flex");
-            subtotalSection.classList.add("d-none");
-        }
+        subtotalSection.classList.add("d-flex");
+        subtotalSection.classList.remove("d-none");
+        subtotalSection.classList.toggle("tiene-descuento", valorDescuento > 0);
     }
 
     const descuentoSection = document.getElementById("descuentoSection");
-    if (valorDescuento > 0) {
-        descuentoSection.classList.add("visible");
-    } else {
-        descuentoSection.classList.remove("visible");
+    if (descuentoSection) {
+        if (valorDescuento > 0) {
+            descuentoSection.classList.add("visible");
+        } else {
+            descuentoSection.classList.remove("visible");
+        }
     }
 
     const ivaSection = document.getElementById("ivaSection");
