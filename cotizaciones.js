@@ -754,12 +754,12 @@ function calcularTotales() {
     if (subtotalSection) {
         subtotalSection.classList.add("d-flex");
         subtotalSection.classList.remove("d-none");
-        subtotalSection.classList.toggle("tiene-descuento", valorDescuento > 0);
+        subtotalSection.classList.toggle("tiene-descuento", valorDescuento > 0 && !resumen.ivaAplicado);
     }
 
     const descuentoSection = document.getElementById("descuentoSection");
     if (descuentoSection) {
-        if (valorDescuento > 0) {
+        if (valorDescuento > 0 && !resumen.ivaAplicado) {
             descuentoSection.classList.add("visible");
         } else {
             descuentoSection.classList.remove("visible");
