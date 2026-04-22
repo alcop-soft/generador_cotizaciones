@@ -544,6 +544,9 @@ function agregarNuevaTabla() {
 function renderizarTabla() {
     const tbody = document.getElementById("tablaBody");
     const columnaImagen = document.getElementById("columnaImagen");
+    if (!tbody) {
+        return;
+    }
     const mostrarColumnaImagen = productos.some((producto) => Boolean(producto.imagen));
     sincronizarOpcionesDisponibles();
 
@@ -564,10 +567,16 @@ function renderizarTabla() {
     const opciones = agruparPorOpcion(productos);
     const llaves = Object.keys(opciones).sort((a, b) => Number(a) - Number(b));
     const numeroOpciones = llaves.length;
-    llaves.forEach((opcion) => {
+    llaves.forEach((opcion, index) => {
         const productosOpcion = opciones[opcion];
         const resumenOpcion = calcularResumenOpcion(productosOpcion, opcion);
         if (numeroOpciones > 1) {
+            if (index > 0) {
+                const trSeparador = document.createElement("tr");
+                trSeparador.className = "opcion-separador-row";
+                trSeparador.innerHTML = `<td colspan="${mostrarColumnaImagen ? 6 : 5}"></td>`;
+                tbody.appendChild(trSeparador);
+            }
             const trHeader = document.createElement("tr");
             trHeader.innerHTML = `
                 <td colspan="${mostrarColumnaImagen ? 6 : 5}" class="opcion-header-cell">
@@ -628,7 +637,7 @@ function renderizarTabla() {
             const imagenCelda = producto.imagen
                 ? `<img src="${producto.imagen}" alt="Imagen de ${tituloSeguro || "producto"}" class="producto-img">`
                 : '<span class="text-muted">Sin imagen</span>';
-            const unidadTexto = producto.unidad ? ` ${producto.unidad}` : "";
+            const unidadTexto = producto.unidad ? ` ${escaparHtml(producto.unidad)}` : "";
             const botonEditar = `
                 <button class="btn btn-sm btn-primary me-1" onclick="abrirModalEdicion(${producto.id})">
                     <i class="bi bi-pencil-square"></i> Editar
@@ -657,7 +666,7 @@ function renderizarTabla() {
             if (mostrarDetalle) {
                 resumenPills.push(`
                     <div class="opcion-resumen-card">
-                        <span class="opcion-resumen-card-label">Precio original</span>
+                        <span class="opcion-resumen-card-label">Subtotal</span>
                         <span class="opcion-resumen-card-value">${formatoPeso(resumenOpcion.subtotal)}</span>
                     </div>
                 `);
@@ -705,20 +714,39 @@ function agruparPorOpcion(items) {
     }, {});
 }
 
+function actualizarLayoutResumen({ mostrarNota, mostrarTotales }) {
+    const layoutRow = document.querySelector(".nota-total-row");
+    if (!layoutRow) {
+        return;
+    }
+
+    layoutRow.classList.toggle("sin-nota", !mostrarNota);
+    layoutRow.classList.toggle("sin-totales", !mostrarTotales);
+}
+
 function calcularTotales() {
     const opciones = agruparPorOpcion(productos);
     const numeroOpciones = Object.keys(opciones).length;
     const totalesGenerales = document.getElementById("totalesGenerales");
+    const totalesCol = document.querySelector(".totales-col");
+    const notaCard = document.getElementById("notaRapidaCard");
+    const mostrarNota = Boolean(notaCard && !notaCard.classList.contains("d-none"));
     if (!totalesGenerales) {
         return;
     }
 
     if (numeroOpciones > 1) {
-        totalesGenerales.style.display = "none";
+        if (totalesCol) {
+            totalesCol.classList.add("d-none");
+        }
+        actualizarLayoutResumen({ mostrarNota, mostrarTotales: false });
         return;
     }
 
-    totalesGenerales.style.display = "block";
+    if (totalesCol) {
+        totalesCol.classList.remove("d-none");
+    }
+    totalesGenerales.style.display = "";
     const opcionUnica = Object.keys(opciones)[0] || "1";
     const resumen = calcularResumenOpcion(opciones[opcionUnica] || [], opcionUnica);
     const valorDescuento = resumen.valorDescuento;
@@ -734,7 +762,7 @@ function calcularTotales() {
     const descuentoSubtitulo = document.getElementById("descuentoSubtitulo");
     if (descuentoSubtitulo) {
         descuentoSubtitulo.innerText = valorDescuento > 0
-            ? `Ahorras ${formatoPeso(valorDescuento)} sobre el precio original`
+            ? `Descuento de ${formatoNumero(resumen.descuentoPorcentaje)}% equivalente a ${formatoPeso(valorDescuento)}`
             : "Ahorro sobre el precio original";
     }
     const descuentoOpcionUnicaInput = document.getElementById("descuentoOpcionUnica");
@@ -754,12 +782,18 @@ function calcularTotales() {
     if (subtotalSection) {
         subtotalSection.classList.add("d-flex");
         subtotalSection.classList.remove("d-none");
-        subtotalSection.classList.toggle("tiene-descuento", valorDescuento > 0 && !resumen.ivaAplicado);
+        subtotalSection.classList.toggle("tiene-descuento", valorDescuento > 0);
+    }
+    const subtotalHelper = document.getElementById("subtotalHelper");
+    if (subtotalHelper) {
+        const mostrarTextoDescuento = valorDescuento > 0;
+        subtotalHelper.innerText = mostrarTextoDescuento ? "Valor antes del descuento" : "";
+        subtotalHelper.style.display = mostrarTextoDescuento ? "" : "none";
     }
 
     const descuentoSection = document.getElementById("descuentoSection");
     if (descuentoSection) {
-        if (valorDescuento > 0 && !resumen.ivaAplicado) {
+        if (valorDescuento > 0) {
             descuentoSection.classList.add("visible");
         } else {
             descuentoSection.classList.remove("visible");
@@ -774,6 +808,8 @@ function calcularTotales() {
             ivaSection.classList.remove("visible");
         }
     }
+
+    actualizarLayoutResumen({ mostrarNota, mostrarTotales: true });
 }
 
 function actualizarSaludo() {
@@ -822,4 +858,6 @@ function actualizarNotaRapida() {
     }
 
     notaTexto.innerText = mostrarNota ? texto : "";
+    const totalesVisibles = !document.querySelector(".totales-col")?.classList.contains("d-none");
+    actualizarLayoutResumen({ mostrarNota, mostrarTotales: totalesVisibles });
 }

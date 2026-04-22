@@ -96,11 +96,39 @@
     }
 
     .total-box {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: var(--brand-strong);
-        border-top: 2px solid var(--line);
-        padding-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--brand) 0%, #314863 100%);
+        box-shadow: 0 14px 24px rgba(27, 39, 53, 0.16);
+        color: #fff;
+    }
+
+    .total-box-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .total-box-label {
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(255, 255, 255, 0.8);
+    }
+
+    .total-box-helper {
+        font-size: 0.84rem;
+        color: rgba(255, 255, 255, 0.92);
+    }
+
+    .total-box #totalGeneral {
+        font-size: 1.22rem;
+        font-weight: 800;
+        white-space: nowrap;
     }
 
     .btn {
@@ -163,7 +191,7 @@
         border: 1px solid var(--line);
         border-radius: 10px;
         padding: 14px 16px;
-        min-height: 150px;
+        min-height: 120px;
         background-color: #f8fafc;
         background-image:
             linear-gradient(#e5e7eb 1px, transparent 1px),
@@ -208,7 +236,6 @@
 
     .iva-section {
         display: none;
-        justify-content: space-between;
     }
 
     .iva-section.visible {
@@ -223,30 +250,40 @@
         background: #f8fafc;
     }
 
+    .opcion-separador-row td {
+        height: 14px;
+        padding: 0 !important;
+        border: none !important;
+        background: transparent !important;
+    }
+
     .opcion-resumen-row td {
         background: #fcfcfd;
+        padding-top: 10px;
+        padding-bottom: 14px;
     }
 
     .opcion-resumen-inline {
         display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: stretch;
+        gap: 6px;
     }
 
     .opcion-resumen-card {
-        min-width: 220px;
+        min-width: 160px;
         max-width: 100%;
         border: 1px solid #d0d5dd;
-        border-radius: 12px;
-        padding: 10px 12px;
+        border-radius: 10px;
+        padding: 8px 10px;
         background: #fff;
         text-align: left;
     }
 
     .opcion-resumen-card-label {
         display: block;
-        font-size: 0.72rem;
+        font-size: 0.68rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         color: #667085;
@@ -256,6 +293,7 @@
     .opcion-resumen-card-value {
         font-weight: 700;
         color: var(--brand-strong);
+        font-size: 0.94rem;
     }
 
     .opcion-resumen-card-descuento {
@@ -280,16 +318,55 @@
 
     .totales-card {
         border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 18px;
+        border-radius: 16px;
+        padding: 13px 15px;
+        width: min(100%, 360px);
+        margin-left: auto;
         background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.07);
+    }
+
+    .resumen-linea {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border: 1px solid #d0d5dd;
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .resumen-linea-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .resumen-linea-label {
+        display: block;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #667085;
+    }
+
+    .resumen-linea-helper {
+        font-size: 0.82rem;
+        color: var(--ink-soft);
+    }
+
+    .resumen-linea-value {
+        font-size: 0.98rem;
+        font-weight: 700;
+        color: var(--brand-strong);
+        white-space: nowrap;
     }
 
     .precio-base-section {
         align-items: center;
-        gap: 12px;
-        padding: 12px 14px;
+        gap: 10px;
+        padding: 8px 10px;
         border: 1px solid #d0d5dd;
         border-radius: 12px;
         background: #fff;
@@ -305,12 +382,12 @@
     }
 
     .precio-base-helper {
-        font-size: 0.92rem;
+        font-size: 0.84rem;
         color: var(--ink-soft);
     }
 
     .precio-base-valor {
-        font-size: 1.15rem;
+        font-size: 1.02rem;
         font-weight: 700;
         color: var(--brand-strong);
     }
@@ -325,10 +402,10 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 16px;
+        gap: 12px;
         border: 1px solid #fecdca;
         border-radius: 14px;
-        padding: 14px 16px;
+        padding: 9px 10px;
         background: linear-gradient(135deg, #fff7ed 0%, #fef3f2 100%);
         box-shadow: 0 12px 22px rgba(180, 35, 24, 0.12);
     }
@@ -354,13 +431,13 @@
     }
 
     .descuento-titulo {
-        font-size: 1rem;
+        font-size: 0.92rem;
         font-weight: 700;
         color: #912018;
     }
 
     .descuento-subtitulo {
-        font-size: 0.88rem;
+        font-size: 0.8rem;
         color: #7a271a;
     }
 
@@ -378,7 +455,7 @@
     }
 
     .descuento-highlight-value {
-        font-size: 1.4rem;
+        font-size: 1.14rem;
         line-height: 1;
         font-weight: 800;
         color: #912018;
@@ -386,7 +463,59 @@
 
     .resumen-divider {
         border-top: 1px dashed #d0d5dd;
-        margin: 14px 0 12px;
+        margin: 7px 0;
+    }
+
+    .nota-total-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+        grid-template-areas:
+            "nota totales"
+            "firma totales";
+        gap: 18px 28px;
+        align-items: start;
+    }
+
+    .nota-total-row.sin-nota {
+        grid-template-areas: "firma totales";
+    }
+
+    .nota-total-row.sin-totales {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas:
+            "nota"
+            "firma";
+    }
+
+    .nota-total-row.sin-nota.sin-totales {
+        grid-template-areas: "firma";
+    }
+
+    .nota-total-row.sin-nota .nota-col {
+        display: none;
+    }
+
+    .nota-total-row.sin-totales .totales-col {
+        display: none;
+    }
+
+    .nota-col {
+        grid-area: nota;
+        min-width: 0;
+    }
+
+    .totales-col {
+        grid-area: totales;
+        min-width: 0;
+    }
+
+    .firma-col {
+        grid-area: firma;
+    }
+
+    .firma-block {
+        max-width: 460px;
+        padding-top: 2px;
     }
 
     .lineas-decorativas {
@@ -433,15 +562,52 @@
         }
 
         .opcion-resumen-inline {
-            align-items: stretch;
+            justify-content: flex-start;
         }
 
         .opcion-resumen-card {
             min-width: 100%;
         }
+
+        .nota-total-row {
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "nota"
+                "totales"
+                "firma";
+            gap: 18px;
+        }
+
+        .nota-total-row.sin-nota {
+            grid-template-areas:
+                "totales"
+                "firma";
+        }
+
+        .nota-total-row.sin-totales {
+            grid-template-areas:
+                "nota"
+                "firma";
+        }
+
+        .nota-total-row.sin-nota.sin-totales {
+            grid-template-areas: "firma";
+        }
+
+        .totales-col {
+            width: 100%;
+        }
+
+        .totales-card {
+            width: 100%;
+        }
     }
 
     @media print {
+        @page {
+            margin: 12mm 10mm 12mm 10mm;
+        }
+
         * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -531,17 +697,43 @@
             color: #1f2937 !important;
         }
 
-        .nota-total-row {
-            display: flex !important;
-            gap: 16px;
-            align-items: stretch;
-            flex-wrap: nowrap;
+        .tabla-cotizacion thead {
+            display: table-header-group;
         }
 
-        .nota-total-row > .col-md-6 {
-            flex: 0 0 50% !important;
-            max-width: 50% !important;
-            width: 50% !important;
+        .nota-total-row {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) 305px;
+            grid-template-areas:
+                "nota totales"
+                "firma totales";
+            gap: 18px;
+            align-items: start;
+        }
+
+        .nota-total-row.sin-nota {
+            grid-template-areas: "firma totales";
+        }
+
+        .nota-total-row.sin-totales {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas:
+                "nota"
+                "firma";
+        }
+
+        .nota-total-row.sin-nota.sin-totales {
+            grid-template-areas: "firma";
+        }
+
+        .nota-col,
+        .firma-col {
+            max-width: none !important;
+        }
+
+        .totales-col {
+            width: 305px !important;
+            max-width: 305px !important;
         }
 
         .nota-rapida {
@@ -561,10 +753,48 @@
 
         .totales-card {
             box-shadow: none;
+            width: 100%;
+            padding: 9px 10px;
         }
 
         .descuento-highlight {
             box-shadow: none;
+        }
+
+        .total-box {
+            box-shadow: none;
+        }
+
+        .opcion-separador-row td {
+            height: 10px;
+        }
+
+        .opcion-resumen-inline {
+            justify-content: flex-end;
+            gap: 4px;
+        }
+
+        .opcion-resumen-card {
+            min-width: 126px;
+            padding: 6px 8px;
+        }
+
+        .firma-block {
+            margin-top: 14px;
+        }
+
+        .tabla-cotizacion tr,
+        .tabla-cotizacion td,
+        .tabla-cotizacion th,
+        .nota-total-row,
+        .nota-col,
+        .totales-col,
+        .firma-col,
+        .totales-card,
+        .nota-rapida,
+        .firma-block {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
         }
     }
 </style>
@@ -734,15 +964,15 @@
         <tbody id="tablaBody"></tbody>
     </table>
 
-    <div class="row mt-4 nota-total-row">
-                <div class="col-md-6">
-                    <div id="notaRapidaCard" class="nota-rapida d-none">
-                        <button id="eliminarNota" class="btn btn-outline-danger nota-delete no-print" type="button">✕</button>
-                        <div class="nota-rapida-title">Nota</div>
-                        <div id="notaRapidaTexto" class="nota-rapida-texto"></div>
-                    </div>
-                </div>
-        <div class="col-md-6">
+    <div class="mt-4 nota-total-row">
+        <div class="nota-col">
+            <div id="notaRapidaCard" class="nota-rapida d-none">
+                <button id="eliminarNota" class="btn btn-outline-danger nota-delete no-print" type="button">✕</button>
+                <div class="nota-rapida-title">Nota</div>
+                <div id="notaRapidaTexto" class="nota-rapida-texto"></div>
+            </div>
+        </div>
+        <div class="totales-col">
             <div class="totales-card" id="totalesGenerales">
                 <div id="descuentoUnicoControl" class="mb-2 no-print">
                     <label for="descuentoOpcionUnica" class="form-label fw-bold mb-1">Descuento (%)</label>
@@ -754,8 +984,8 @@
                 </div>
                 <div id="subtotalSection" class="d-flex justify-content-between mb-2 precio-base-section">
                     <div>
-                        <span class="precio-base-label">Precio original</span>
-                        <span class="precio-base-helper">Valor antes del descuento</span>
+                        <span class="precio-base-label">Subtotal</span>
+                        <span id="subtotalHelper" class="precio-base-helper"></span>
                     </div>
                     <span id="subtotal" class="precio-base-valor">$0</span>
                 </div>
@@ -773,25 +1003,33 @@
                     </div>
                 </div>
                 <div class="resumen-divider"></div>
-                <div id="ivaSection" class="mb-2 iva-section">
-                    <span>IVA (19%):</span>
-                    <span id="ivaValor" class="fw-bold">$0</span>
+                <div id="ivaSection" class="mb-2 iva-section resumen-linea">
+                    <div class="resumen-linea-copy">
+                        <span class="resumen-linea-label">IVA 19%</span>
+                        <span class="resumen-linea-helper">Impuesto sobre el valor final</span>
+                    </div>
+                    <span id="ivaValor" class="resumen-linea-value">$0</span>
                 </div>
-                <div class="d-flex justify-content-between total-box">
-                    <span>Total general:</span>
+                <div class="total-box">
+                    <div class="total-box-copy">
+                        <span class="total-box-label">Total general</span>
+                        <span class="total-box-helper">Valor final de la cotización</span>
+                    </div>
                     <span id="totalGeneral">$0</span>
                 </div>
             </div>
         </div>
+        <div class="firma-col">
+            <div class="firma-block">
+                <p class="mb-2">En espera de su amable respuesta,</p>
+                <p class="mb-0">
+                    Atentamente,<br>
+                    <span id="nombreVendedor">ALCOP.</span><br>
+                    <span id="telefonoVendedor" class="text-muted"></span>
+                </p>
+            </div>
+        </div>
     </div>
-
-    <p class="mt-4 mb-2">En espera de su amable respuesta,</p>
-
-    <p>
-        Atentamente,<br>
-        <span id="nombreVendedor">ALCOP.</span><br>
-        <span id="telefonoVendedor" class="text-muted"></span>
-    </p>
 </div>
 
 <div class="modal fade" id="editarInstalacionModal" tabindex="-1" aria-labelledby="editarInstalacionModalLabel" aria-hidden="true">
