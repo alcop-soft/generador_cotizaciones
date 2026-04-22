@@ -752,6 +752,7 @@ function calcularTotales() {
     const valorDescuento = resumen.valorDescuento;
     const valorIva = resumen.valorIva;
     const total = resumen.total;
+    const mostrarSubtotal = resumen.subtotal !== total;
 
     document.getElementById("subtotal").innerText = formatoPeso(resumen.subtotal);
     document.getElementById("descuentoValor").innerText = formatoPeso(valorDescuento);
@@ -780,8 +781,8 @@ function calcularTotales() {
     document.getElementById("totalGeneral").innerText = formatoPeso(total);
     const subtotalSection = document.getElementById("subtotalSection");
     if (subtotalSection) {
-        subtotalSection.classList.add("d-flex");
-        subtotalSection.classList.remove("d-none");
+        subtotalSection.classList.toggle("d-flex", mostrarSubtotal);
+        subtotalSection.classList.toggle("d-none", !mostrarSubtotal);
         subtotalSection.classList.toggle("tiene-descuento", valorDescuento > 0);
     }
     const subtotalHelper = document.getElementById("subtotalHelper");
