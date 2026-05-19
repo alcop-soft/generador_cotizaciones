@@ -797,13 +797,17 @@
             display: table-header-group;
         }
 
+        .tabla-cotizacion tfoot {
+            display: table-footer-group;
+        }
+
         .opciones-tablas {
             gap: 10px;
         }
 
         .opcion-bloque {
-            break-inside: avoid-page !important;
-            page-break-inside: avoid !important;
+            break-inside: auto !important;
+            page-break-inside: auto !important;
         }
 
         .opcion-bloque-salto {
@@ -921,7 +925,6 @@
         .tabla-cotizacion tr,
         .tabla-cotizacion td,
         .tabla-cotizacion th,
-        .tabla-cotizacion,
         .nota-total-row,
         .nota-col,
         .totales-col,
@@ -933,9 +936,13 @@
             page-break-inside: avoid !important;
         }
 
+        .opcion-resumen-row {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+        }
+
         .tabla-cotizacion {
-            break-after: avoid-page !important;
-            page-break-after: avoid !important;
+            margin-bottom: 10px !important;
         }
     }
 </style>

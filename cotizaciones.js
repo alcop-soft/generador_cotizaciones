@@ -262,9 +262,70 @@ function refrescarCotizacion() {
     calcularTotales();
 }
 
-function prepararExportacionPDF() {
+function esperarSiguienteFrame() {
+    return new Promise((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+    });
+}
+
+function esperarConTimeout(promesa, timeoutMs = 4000) {
+    return new Promise((resolve) => {
+        let resuelto = false;
+        const timeoutId = window.setTimeout(() => {
+            if (resuelto) {
+                return;
+            }
+            resuelto = true;
+            resolve();
+        }, timeoutMs);
+
+        Promise.resolve(promesa)
+            .catch(() => {})
+            .finally(() => {
+                if (resuelto) {
+                    return;
+                }
+                resuelto = true;
+                window.clearTimeout(timeoutId);
+                resolve();
+            });
+    });
+}
+
+async function esperarImagenesCotizacion() {
+    const contenedor = document.querySelector(".cotizacion-container");
+    if (!contenedor) {
+        return;
+    }
+
+    const imagenes = Array.from(contenedor.querySelectorAll("img"));
+    if (!imagenes.length) {
+        await esperarSiguienteFrame();
+        return;
+    }
+
+    await Promise.all(imagenes.map(async (img) => {
+        if (!img.complete || img.naturalWidth === 0) {
+            await esperarConTimeout(new Promise((resolve) => {
+                const resolver = () => resolve();
+                img.addEventListener("load", resolver, { once: true });
+                img.addEventListener("error", resolver, { once: true });
+            }), 4000);
+        }
+
+        if (typeof img.decode === "function") {
+            await esperarConTimeout(img.decode(), 2500);
+        }
+    }));
+
+    await esperarSiguienteFrame();
+    await esperarSiguienteFrame();
+}
+
+async function prepararExportacionPDF() {
     sincronizarOpcionesDisponibles();
     refrescarCotizacion();
+    await esperarImagenesCotizacion();
     optimizarSaltosPaginaOpciones();
 }
 
@@ -281,7 +342,7 @@ function finalizarExportacionPDF() {
     }
 }
 
-function exportarPDF() {
+async function exportarPDF() {
     if (exportacionEnCurso) {
         return;
     }
@@ -292,7 +353,14 @@ function exportarPDF() {
         botonExportar.disabled = true;
     }
 
-    prepararExportacionPDF();
+    try {
+        await prepararExportacionPDF();
+    } catch (error) {
+        console.error("No se pudo preparar la exportacion:", error);
+        finalizarExportacionPDF();
+        alert("No fue posible preparar la exportación.");
+        return;
+    }
 
     window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
@@ -439,7 +507,15 @@ document.addEventListener("DOMContentLoaded", () => {
     actualizarNotaRapida();
     refrescarCotizacion();
 
-    window.addEventListener("beforeprint", prepararExportacionPDF);
+    window.addEventListener("beforeprint", () => {
+        if (exportacionEnCurso) {
+            return;
+        }
+
+        prepararExportacionPDF().catch((error) => {
+            console.error("No se pudo preparar la impresion:", error);
+        });
+    });
     window.addEventListener("afterprint", finalizarExportacionPDF);
     window.addEventListener("focus", () => {
         if (exportacionEnCurso) {
@@ -841,52 +917,212 @@ function obtenerTablaVaciaHtml(mostrarColumnaImagen) {
     `;
 }
 
+function obtenerAlturaPaginaImpresionPx() {
+    const MM_TO_PX = 96 / 25.4;
+    const ALTO_PAGINA_DISPONIBLE_MM = 297 - 24;
+    return ALTO_PAGINA_DISPONIBLE_MM * MM_TO_PX;
+}
+
+function crearMedidorFragmentos(widthPx) {
+    const medidor = document.createElement("div");
+    medidor.style.position = "absolute";
+    medidor.style.left = "-100000px";
+    medidor.style.top = "0";
+    medidor.style.visibility = "hidden";
+    medidor.style.width = `${Math.ceil(widthPx)}px`;
+    medidor.style.display = "flow-root";
+    document.body.appendChild(medidor);
+    return medidor;
+}
+
+function construirHtmlFragmentoOpcion({ tituloHtml, theadHtml, rowsHtml, saltoPagina }) {
+    return `
+        <section class="opcion-bloque${saltoPagina ? " opcion-bloque-salto" : ""}">
+            ${tituloHtml || ""}
+            <table class="table table-bordered tabla-cotizacion">
+                ${theadHtml}
+                <tbody>
+                    ${rowsHtml.join("")}
+                </tbody>
+            </table>
+        </section>
+    `;
+}
+
+function medirHtmlFragmento(medidor, config) {
+    medidor.innerHTML = construirHtmlFragmentoOpcion({ ...config, saltoPagina: false });
+    const fragmento = medidor.firstElementChild;
+    return fragmento ? fragmento.getBoundingClientRect().height : 0;
+}
+
+function obtenerFilasImprimiblesOpcion(bloque) {
+    const tabla = bloque.querySelector("table.tabla-cotizacion");
+    if (!tabla) {
+        return null;
+    }
+
+    const titulo = bloque.querySelector(":scope > .opcion-header-title");
+    const thead = tabla.querySelector("thead");
+    const filas = Array.from(tabla.querySelectorAll("tbody tr"));
+    const filasItems = filas
+        .filter((fila) => !fila.classList.contains("no-print") && !fila.classList.contains("opcion-resumen-row"))
+        .map((fila) => ({
+            html: fila.outerHTML
+        }));
+    const filaResumen = filas.find((fila) => fila.classList.contains("opcion-resumen-row"));
+
+    return {
+        tituloHtml: titulo ? titulo.outerHTML : "",
+        theadHtml: thead ? thead.outerHTML : "",
+        filasItems,
+        filaResumen: filaResumen
+            ? {
+                html: filaResumen.outerHTML
+            }
+            : null
+    };
+}
+
+function calcularEspacioDisponiblePrimeraPagina(contenedor, altoPaginaPx) {
+    const contenedorImpresion = contenedor.closest(".cotizacion-container") || contenedor.parentElement;
+    if (!contenedorImpresion) {
+        return altoPaginaPx;
+    }
+
+    const rectContenedorImpresion = contenedorImpresion.getBoundingClientRect();
+    const encabezado = contenedorImpresion.querySelector(".header-cotizacion");
+    const inicioContenidoRelativo = contenedor.getBoundingClientRect().top - rectContenedorImpresion.top;
+    const bottomReferenciaRelativo = encabezado
+        ? encabezado.getBoundingClientRect().bottom - rectContenedorImpresion.top
+        : inicioContenidoRelativo;
+    const espacioDisponible = altoPaginaPx - bottomReferenciaRelativo;
+
+    if (espacioDisponible <= 0 || espacioDisponible > altoPaginaPx) {
+        return altoPaginaPx;
+    }
+
+    return espacioDisponible;
+}
+
+function paginarFilasOpcion(datosOpcion, espacioDisponibleInicial, altoPaginaPx, medidor) {
+    const MARGEN_SEGURIDAD_PX = 12;
+    const fragmentos = [];
+    const filasPendientes = [...datosOpcion.filasItems];
+    if (datosOpcion.filaResumen) {
+        filasPendientes.push(datosOpcion.filaResumen);
+    }
+
+    let espacioDisponible = espacioDisponibleInicial;
+    let filasFragmento = [];
+    let primeraPaginaBloque = true;
+    let saltoPaginaFragmentoActual = false;
+
+    while (filasPendientes.length > 0) {
+        const tituloHtml = primeraPaginaBloque ? datosOpcion.tituloHtml : "";
+        const siguienteFila = filasPendientes[0];
+        const filasPrueba = [...filasFragmento, siguienteFila.html];
+        const alturaPrueba = medirHtmlFragmento(medidor, {
+            tituloHtml,
+            theadHtml: datosOpcion.theadHtml,
+            rowsHtml: filasPrueba
+        });
+
+        if (alturaPrueba > (espacioDisponible - MARGEN_SEGURIDAD_PX) && filasFragmento.length > 0) {
+            const alturaFragmento = medirHtmlFragmento(medidor, {
+                tituloHtml,
+                theadHtml: datosOpcion.theadHtml,
+                rowsHtml: filasFragmento
+            });
+
+            fragmentos.push({
+                html: construirHtmlFragmentoOpcion({
+                    tituloHtml,
+                    theadHtml: datosOpcion.theadHtml,
+                    rowsHtml: filasFragmento,
+                    saltoPagina: saltoPaginaFragmentoActual
+                }),
+                altura: alturaFragmento
+            });
+
+            filasFragmento = [];
+            espacioDisponible = altoPaginaPx;
+            primeraPaginaBloque = false;
+            saltoPaginaFragmentoActual = true;
+            continue;
+        }
+
+        if (
+            alturaPrueba > (espacioDisponible - MARGEN_SEGURIDAD_PX)
+            && filasFragmento.length === 0
+            && espacioDisponible < altoPaginaPx
+        ) {
+            espacioDisponible = altoPaginaPx;
+            saltoPaginaFragmentoActual = true;
+            continue;
+        }
+
+        filasFragmento.push(siguienteFila.html);
+        filasPendientes.shift();
+
+        if (filasPendientes.length === 0) {
+            fragmentos.push({
+                html: construirHtmlFragmentoOpcion({
+                    tituloHtml,
+                    theadHtml: datosOpcion.theadHtml,
+                    rowsHtml: filasFragmento,
+                    saltoPagina: saltoPaginaFragmentoActual
+                }),
+                altura: alturaPrueba
+            });
+            espacioDisponible = Math.max(0, espacioDisponible - alturaPrueba);
+        }
+    }
+
+    return {
+        fragmentos,
+        espacioDisponibleFinal: espacioDisponible
+    };
+}
+
 function optimizarSaltosPaginaOpciones() {
-    const bloques = Array.from(document.querySelectorAll(".opcion-bloque"));
     const contenedor = document.getElementById("opcionesTablas");
-    if (!bloques.length || !contenedor) {
+    if (!contenedor) {
         return;
     }
 
-    bloques.forEach((bloque) => bloque.classList.remove("opcion-bloque-salto"));
+    const bloques = Array.from(contenedor.querySelectorAll(".opcion-bloque"));
+    if (!bloques.length) {
+        return;
+    }
 
-    const MM_TO_PX = 96 / 25.4;
-    const ALTO_PAGINA_DISPONIBLE_MM = 297 - 18;
-    const altoPaginaPx = ALTO_PAGINA_DISPONIBLE_MM * MM_TO_PX;
-    const primerBloqueRect = bloques[0].getBoundingClientRect();
-    const primerBloqueTop = primerBloqueRect.top + window.scrollY;
-    let espacioConsumido = primerBloqueTop % altoPaginaPx;
-    let ultimoBottom = primerBloqueTop + primerBloqueRect.height;
+    const altoPaginaPx = obtenerAlturaPaginaImpresionPx();
+    let espacioDisponible = calcularEspacioDisponiblePrimeraPagina(contenedor, altoPaginaPx);
+    const medidor = crearMedidorFragmentos(contenedor.getBoundingClientRect().width);
 
-    bloques.forEach((bloque, index) => {
-        const estilos = window.getComputedStyle(bloque);
-        const margenSuperior = Number.parseFloat(estilos.marginTop) || 0;
-        const margenInferior = Number.parseFloat(estilos.marginBottom) || 0;
-        const bloqueRect = bloque.getBoundingClientRect();
-        const bloqueTop = bloqueRect.top + window.scrollY;
-        const alturaBloque = bloqueRect.height + margenSuperior + margenInferior;
-        const separacionReal = index > 0 ? Math.max(0, bloqueTop - ultimoBottom) : 0;
-        const espacioNecesario = separacionReal + alturaBloque;
-        const espacioRestante = altoPaginaPx - espacioConsumido;
-        const cabeCompleto = alturaBloque <= altoPaginaPx;
-        const requiereSalto = index > 0 && cabeCompleto && espacioNecesario > espacioRestante;
+    try {
+        const nuevoHtml = [];
 
-        if (requiereSalto) {
-            bloque.classList.add("opcion-bloque-salto");
-            espacioConsumido = alturaBloque;
-        } else {
-            espacioConsumido += espacioNecesario;
-        }
+        bloques.forEach((bloque) => {
+            const datos = obtenerFilasImprimiblesOpcion(bloque);
+            if (!datos) {
+                return;
+            }
 
-        espacioConsumido %= altoPaginaPx;
-        ultimoBottom = bloqueTop + bloqueRect.height;
-    });
+            const resultado = paginarFilasOpcion(datos, espacioDisponible, altoPaginaPx, medidor);
+            resultado.fragmentos.forEach((fragmento) => {
+                nuevoHtml.push(fragmento.html);
+            });
+            espacioDisponible = resultado.espacioDisponibleFinal;
+        });
+
+        contenedor.innerHTML = nuevoHtml.join("");
+    } finally {
+        medidor.remove();
+    }
 }
 
 function limpiarSaltosPaginaOpciones() {
-    document.querySelectorAll(".opcion-bloque-salto").forEach((bloque) => {
-        bloque.classList.remove("opcion-bloque-salto");
-    });
+    refrescarCotizacion();
 }
 
 function renderizarTabla() {
