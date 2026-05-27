@@ -95,6 +95,22 @@
         margin-bottom: 0;
     }
 
+    .medidor-exportacion-pdf .no-print,
+    .medidor-exportacion-pdf .tabla-cotizacion th:last-child,
+    .medidor-exportacion-pdf .tabla-cotizacion td:last-child {
+        display: none !important;
+    }
+
+    .medidor-exportacion-pdf .tabla-cotizacion {
+        width: 100%;
+        margin-bottom: 10px !important;
+    }
+
+    .medidor-exportacion-pdf .opcion-bloque {
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+    }
+
     .descripcion-producto {
         line-height: 1.25;
     }
@@ -1061,6 +1077,7 @@
                         <option value="Marina Arbelaez">Marina Arbelaez</option>
                         <option value="Alba Arbelaez">Alba Arbelaez</option>
                         <option value="Cesar Yovanny">Cesar Yovanny</option>
+                        <option value="Tania Jaramillo">Tania Jaramillo</option>
                         <option value="Otro">Otro</option>
                     </select>
                     <input type="text" id="vendedorOtro" class="form-control mt-2 d-none" placeholder="Nombre del vendedor">

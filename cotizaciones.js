@@ -92,6 +92,7 @@ const VENDEDORES = {
     "Marina Arbelaez": "320 8940228",
     "Alba Arbelaez": "310 4692399",
     "Cesar Yovanny": "310 5385318",
+    "Tania Jaramillo": "321 7719562",
     "Otro": "321 7719562"
 };
 
@@ -923,8 +924,25 @@ function obtenerAlturaPaginaImpresionPx() {
     return ALTO_PAGINA_DISPONIBLE_MM * MM_TO_PX;
 }
 
+function obtenerAnchoContenidoImpresionPx(contenedor) {
+    const MM_TO_PX = 96 / 25.4;
+    const ANCHO_PAGINA_DISPONIBLE_MM = 210 - 20;
+    const anchoPaginaPx = ANCHO_PAGINA_DISPONIBLE_MM * MM_TO_PX;
+    const contenedorImpresion = contenedor.closest(".cotizacion-container");
+
+    if (!contenedorImpresion) {
+        return anchoPaginaPx;
+    }
+
+    const estilos = window.getComputedStyle(contenedorImpresion);
+    const paddingLeftPrintPx = 88;
+    const paddingRightPx = Number.parseFloat(estilos.paddingRight) || 0;
+    return Math.max(240, anchoPaginaPx - paddingLeftPrintPx - paddingRightPx);
+}
+
 function crearMedidorFragmentos(widthPx) {
     const medidor = document.createElement("div");
+    medidor.className = "medidor-exportacion-pdf";
     medidor.style.position = "absolute";
     medidor.style.left = "-100000px";
     medidor.style.top = "0";
@@ -1097,7 +1115,11 @@ function optimizarSaltosPaginaOpciones() {
 
     const altoPaginaPx = obtenerAlturaPaginaImpresionPx();
     let espacioDisponible = calcularEspacioDisponiblePrimeraPagina(contenedor, altoPaginaPx);
-    const medidor = crearMedidorFragmentos(contenedor.getBoundingClientRect().width);
+    const anchoMedicionPx = Math.min(
+        contenedor.getBoundingClientRect().width,
+        obtenerAnchoContenidoImpresionPx(contenedor)
+    );
+    const medidor = crearMedidorFragmentos(anchoMedicionPx);
 
     try {
         const nuevoHtml = [];
