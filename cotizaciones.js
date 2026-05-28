@@ -363,17 +363,13 @@ async function exportarPDF() {
         return;
     }
 
-    window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
-            try {
-                window.print();
-            } catch (error) {
-                console.error("No se pudo abrir la impresión:", error);
-                finalizarExportacionPDF();
-                alert("No fue posible abrir la vista de impresión.");
-            }
-        });
-    });
+    try {
+        window.print();
+    } catch (error) {
+        console.error("No se pudo abrir la impresión:", error);
+        finalizarExportacionPDF();
+        alert("No fue posible abrir la vista de impresión.");
+    }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -985,6 +981,7 @@ function obtenerFilasImprimiblesOpcion(bloque) {
     const filasItems = filas
         .filter((fila) => !fila.classList.contains("no-print") && !fila.classList.contains("opcion-resumen-row"))
         .map((fila) => ({
+            tipo: "item",
             html: fila.outerHTML
         }));
     const filaResumen = filas.find((fila) => fila.classList.contains("opcion-resumen-row"));
@@ -995,6 +992,7 @@ function obtenerFilasImprimiblesOpcion(bloque) {
         filasItems,
         filaResumen: filaResumen
             ? {
+                tipo: "resumen",
                 html: filaResumen.outerHTML
             }
             : null
@@ -1008,12 +1006,8 @@ function calcularEspacioDisponiblePrimeraPagina(contenedor, altoPaginaPx) {
     }
 
     const rectContenedorImpresion = contenedorImpresion.getBoundingClientRect();
-    const encabezado = contenedorImpresion.querySelector(".header-cotizacion");
     const inicioContenidoRelativo = contenedor.getBoundingClientRect().top - rectContenedorImpresion.top;
-    const bottomReferenciaRelativo = encabezado
-        ? encabezado.getBoundingClientRect().bottom - rectContenedorImpresion.top
-        : inicioContenidoRelativo;
-    const espacioDisponible = altoPaginaPx - bottomReferenciaRelativo;
+    const espacioDisponible = altoPaginaPx - inicioContenidoRelativo;
 
     if (espacioDisponible <= 0 || espacioDisponible > altoPaginaPx) {
         return altoPaginaPx;
@@ -1023,7 +1017,8 @@ function calcularEspacioDisponiblePrimeraPagina(contenedor, altoPaginaPx) {
 }
 
 function paginarFilasOpcion(datosOpcion, espacioDisponibleInicial, altoPaginaPx, medidor) {
-    const MARGEN_SEGURIDAD_PX = 12;
+    const MARGEN_SEGURIDAD_PX = 4;
+    const TOLERANCIA_RESUMEN_PX = 90;
     const fragmentos = [];
     const filasPendientes = [...datosOpcion.filasItems];
     if (datosOpcion.filaResumen) {
@@ -1044,8 +1039,11 @@ function paginarFilasOpcion(datosOpcion, espacioDisponibleInicial, altoPaginaPx,
             theadHtml: datosOpcion.theadHtml,
             rowsHtml: filasPrueba
         });
+        const margenFila = siguienteFila.tipo === "resumen"
+            ? MARGEN_SEGURIDAD_PX - TOLERANCIA_RESUMEN_PX
+            : MARGEN_SEGURIDAD_PX;
 
-        if (alturaPrueba > (espacioDisponible - MARGEN_SEGURIDAD_PX) && filasFragmento.length > 0) {
+        if (alturaPrueba > (espacioDisponible - margenFila) && filasFragmento.length > 0) {
             const alturaFragmento = medirHtmlFragmento(medidor, {
                 tituloHtml,
                 theadHtml: datosOpcion.theadHtml,
@@ -1070,7 +1068,7 @@ function paginarFilasOpcion(datosOpcion, espacioDisponibleInicial, altoPaginaPx,
         }
 
         if (
-            alturaPrueba > (espacioDisponible - MARGEN_SEGURIDAD_PX)
+            alturaPrueba > (espacioDisponible - margenFila)
             && filasFragmento.length === 0
             && espacioDisponible < altoPaginaPx
         ) {
