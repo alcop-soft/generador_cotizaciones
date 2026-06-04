@@ -91,7 +91,7 @@ const VENDEDORES = {
     "Mateo Vanegas": "315 2762255",
     "Marina Arbelaez": "320 8940228",
     "Alba Arbelaez": "310 4692399",
-    "Cesar Yovanny": "310 5385318",
+    "Cesar Yovanny Franklin": "310 5385318",
     "Tania Jaramillo": "321 7719562",
     "Otro": "321 7719562"
 };
