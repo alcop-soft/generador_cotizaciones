@@ -14,6 +14,9 @@ function formatoNumero(valor) {
 }
 
 const IVA_RATE = 0.19;
+const PRECIO_INSTALACION_PAPEL = 90000;
+const TITULO_INSTALACION_PAPEL = "Instalación papel de colgadura";
+const UNIDAD_ROLLOS = "Rollos";
 
 function normalizarNumero(valor) {
     const numero = Number.parseFloat(valor);
@@ -68,9 +71,27 @@ function obtenerTextoProducto(producto) {
     return `${obtenerTituloProducto(producto)} ${obtenerSubtituloProducto(producto)}`.trim();
 }
 
+function esLineaInstalacionPapel(producto) {
+    return Boolean(producto && producto.esInstalacionPapel);
+}
+
 function esProductoSinDescuento(producto) {
+    if (esLineaInstalacionPapel(producto)) {
+        return true;
+    }
+
     const descripcion = normalizarTexto(obtenerTextoProducto(producto));
     return descripcion.includes("instalacion") || descripcion.includes("mantenimiento");
+}
+
+function esTextoPapelDeColgadura(texto) {
+    const textoNormalizado = normalizarTexto(texto);
+    return textoNormalizado.includes("papel de colgadura")
+        || textoNormalizado.includes("papel colgadura");
+}
+
+function esProductoPapelDeColgadura(producto) {
+    return !esLineaInstalacionPapel(producto) && esTextoPapelDeColgadura(obtenerTextoProducto(producto));
 }
 
 let productos = [];
@@ -80,6 +101,7 @@ let titulosPorOpcion = {};
 let opcionActual = 1;
 let ultimaOpcionCreada = 1;
 const opcionesCreadas = new Set([1]);
+let siguienteProductoId = Date.now();
 let productoEditandoId = null;
 let editarInstalacionModal = null;
 let exportacionEnCurso = false;
@@ -95,6 +117,11 @@ const VENDEDORES = {
     "Tania Jaramillo": "321 7719562",
     "Otro": "321 7719562"
 };
+
+function generarProductoId() {
+    siguienteProductoId += 1;
+    return siguienteProductoId;
+}
 
 function leerImagenProducto() {
     return leerImagenDesdeInput("imagenProducto");
@@ -167,6 +194,63 @@ function aplicarUnidadSeleccionada(selectId, inputId, unidad) {
     selectEl.value = "otra";
     inputEl.classList.remove("d-none");
     inputEl.value = unidad || "";
+}
+
+function seleccionarRollosSiEsUnidadDefault(selectId, inputId) {
+    const selectEl = document.getElementById(selectId);
+    const inputEl = document.getElementById(inputId);
+
+    if (!selectEl || selectEl.value !== UNIDAD_DEFAULT) {
+        return;
+    }
+
+    selectEl.value = UNIDAD_ROLLOS;
+    if (inputEl) {
+        inputEl.value = "";
+        inputEl.classList.add("d-none");
+    }
+}
+
+function obtenerTextoCamposProducto(tituloId, subtituloId) {
+    const tituloInput = document.getElementById(tituloId);
+    const subtituloInput = document.getElementById(subtituloId);
+    const titulo = tituloInput ? tituloInput.value : "";
+    const subtitulo = subtituloInput ? subtituloInput.value : "";
+    return `${titulo} ${subtitulo}`.trim();
+}
+
+function actualizarControlInstalacionPapel() {
+    const control = document.getElementById("instalacionPapelControl");
+    const checkbox = document.getElementById("instalacionPapel");
+    const mostrar = esTextoPapelDeColgadura(obtenerTextoCamposProducto("producto", "productoDescripcion"));
+
+    if (control) {
+        control.classList.toggle("d-none", !mostrar);
+    }
+    if (!mostrar && checkbox) {
+        checkbox.checked = false;
+    }
+    if (mostrar) {
+        seleccionarRollosSiEsUnidadDefault("unidadCantidad", "unidadPersonalizada");
+    }
+}
+
+function actualizarControlInstalacionPapelEdicion() {
+    const control = document.getElementById("editarInstalacionPapelControl");
+    const checkbox = document.getElementById("editarInstalacionPapel");
+    const productoEditando = productos.find((item) => item.id === productoEditandoId);
+    const mostrar = !esLineaInstalacionPapel(productoEditando)
+        && esTextoPapelDeColgadura(obtenerTextoCamposProducto("editarTitulo", "editarSubtitulo"));
+
+    if (control) {
+        control.classList.toggle("d-none", !mostrar);
+    }
+    if (!mostrar && checkbox) {
+        checkbox.checked = false;
+    }
+    if (mostrar) {
+        seleccionarRollosSiEsUnidadDefault("editarUnidad", "editarUnidadPersonalizada");
+    }
 }
 
 function toggleVendedorOtro(selectEl, inputEl) {
@@ -261,6 +345,98 @@ function sincronizarOpcionesDisponibles() {
 function refrescarCotizacion() {
     renderizarTabla();
     calcularTotales();
+}
+
+function productoTieneInstalacionPapel(productoId) {
+    const producto = productos.find((item) => item.id === productoId);
+    if (producto && producto.instalacionPapel) {
+        return true;
+    }
+
+    return productos.some((producto) => (
+        producto.esInstalacionPapel
+        && Array.isArray(producto.productosOrigenIds)
+        && producto.productosOrigenIds.includes(productoId)
+    ));
+}
+
+function obtenerProductosBaseInstalacionPapel() {
+    return productos.filter((producto) => (
+        !esLineaInstalacionPapel(producto)
+        && producto.instalacionPapel
+        && esProductoPapelDeColgadura(producto)
+    ));
+}
+
+function obtenerDatosInstalacionPapel(opcion, productosBase) {
+    const cantidadTotal = productosBase.reduce((acc, producto) => acc + normalizarNumero(producto.cantidad), 0);
+
+    return {
+        titulo: TITULO_INSTALACION_PAPEL,
+        subtitulo: "",
+        descripcion: TITULO_INSTALACION_PAPEL,
+        cantidad: cantidadTotal,
+        unidad: UNIDAD_ROLLOS,
+        precio: PRECIO_INSTALACION_PAPEL,
+        subtotal: calcularSubtotal(cantidadTotal, PRECIO_INSTALACION_PAPEL),
+        imagen: "",
+        opcion,
+        esInstalacionPapel: true,
+        productosOrigenIds: productosBase.map((producto) => producto.id)
+    };
+}
+
+function sincronizarInstalacionesPapel() {
+    const instalacionesExistentes = productos
+        .filter((producto) => producto.esInstalacionPapel)
+        .reduce((acc, producto) => {
+            acc[String(producto.opcion || 1)] = producto.id;
+            return acc;
+        }, {});
+
+    const productosSinInstalacion = productos.filter((producto) => !producto.esInstalacionPapel);
+    const productosBase = obtenerProductosBaseInstalacionPapel();
+    const productosPorOpcion = productosBase.reduce((acc, producto) => {
+        const opcion = String(producto.opcion || 1);
+        if (!acc[opcion]) {
+            acc[opcion] = [];
+        }
+        acc[opcion].push(producto);
+        return acc;
+    }, {});
+
+    const instalacionesPorOpcion = Object.keys(productosPorOpcion).reduce((acc, opcion) => {
+        const productosOpcion = productosPorOpcion[opcion];
+        const datosInstalacion = obtenerDatosInstalacionPapel(opcion, productosOpcion);
+        acc[opcion] = {
+            id: instalacionesExistentes[opcion] || generarProductoId(),
+            ...datosInstalacion
+        };
+        return acc;
+    }, {});
+
+    productos = [];
+    productosSinInstalacion.forEach((producto) => {
+        productos.push(producto);
+
+        const opcion = String(producto.opcion || 1);
+        const instalacion = instalacionesPorOpcion[opcion];
+        if (
+            instalacion
+            && instalacion.productosOrigenIds.includes(producto.id)
+            && producto.id === instalacion.productosOrigenIds[instalacion.productosOrigenIds.length - 1]
+        ) {
+            productos.push(instalacion);
+        }
+    });
+}
+
+function sincronizarInstalacionPapel(productoBase, incluirInstalacion) {
+    if (productoBase && !esLineaInstalacionPapel(productoBase)) {
+        productoBase.instalacionPapel = Boolean(incluirInstalacion && esProductoPapelDeColgadura(productoBase));
+    }
+
+    sincronizarInstalacionesPapel();
 }
 
 function esperarSiguienteFrame() {
@@ -392,11 +568,29 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleUnidadPersonalizada(unidadSelect, unidadPersonalizada);
     }
 
+    const productoInput = document.getElementById("producto");
+    const productoDescripcionInput = document.getElementById("productoDescripcion");
+    if (productoInput) {
+        productoInput.addEventListener("input", actualizarControlInstalacionPapel);
+    }
+    if (productoDescripcionInput) {
+        productoDescripcionInput.addEventListener("input", actualizarControlInstalacionPapel);
+    }
+
     const editarUnidadSelect = document.getElementById("editarUnidad");
     const editarUnidadPersonalizada = document.getElementById("editarUnidadPersonalizada");
     if (editarUnidadSelect && editarUnidadPersonalizada) {
         editarUnidadSelect.addEventListener("change", () => toggleUnidadPersonalizada(editarUnidadSelect, editarUnidadPersonalizada));
         toggleUnidadPersonalizada(editarUnidadSelect, editarUnidadPersonalizada);
+    }
+
+    const editarTituloInput = document.getElementById("editarTitulo");
+    const editarSubtituloInput = document.getElementById("editarSubtitulo");
+    if (editarTituloInput) {
+        editarTituloInput.addEventListener("input", actualizarControlInstalacionPapelEdicion);
+    }
+    if (editarSubtituloInput) {
+        editarSubtituloInput.addEventListener("input", actualizarControlInstalacionPapelEdicion);
     }
 
     const editarImagenProducto = document.getElementById("editarImagenProducto");
@@ -502,6 +696,7 @@ document.addEventListener("DOMContentLoaded", () => {
     actualizarSaludo();
     actualizarNombreVendedor();
     actualizarNotaRapida();
+    actualizarControlInstalacionPapel();
     refrescarCotizacion();
 
     window.addEventListener("beforeprint", () => {
@@ -541,9 +736,11 @@ async function agregarProducto() {
     }
 
     const subtotal = calcularSubtotal(cantidad, precio);
+    const incluirInstalacionPapel = esTextoPapelDeColgadura(`${titulo} ${subtitulo}`)
+        && Boolean(document.getElementById("instalacionPapel")?.checked);
 
-    productos.push({
-        id: Date.now() + Math.floor(Math.random() * 1000),
+    const producto = {
+        id: generarProductoId(),
         titulo,
         subtitulo,
         descripcion: titulo,
@@ -552,8 +749,12 @@ async function agregarProducto() {
         precio,
         subtotal,
         imagen,
-        opcion: opcionActual
-    });
+        opcion: opcionActual,
+        instalacionPapel: incluirInstalacionPapel
+    };
+
+    productos.push(producto);
+    sincronizarInstalacionPapel(producto, incluirInstalacionPapel);
     opcionesCreadas.add(opcionActual);
 
     document.getElementById("nombreCliente").innerText = cliente;
@@ -564,6 +765,10 @@ async function agregarProducto() {
     document.getElementById("cantidad").value = "";
     document.getElementById("precio").value = "";
     document.getElementById("imagenProducto").value = "";
+    const instalacionPapelCheckbox = document.getElementById("instalacionPapel");
+    if (instalacionPapelCheckbox) {
+        instalacionPapelCheckbox.checked = false;
+    }
     const unidadSelect = document.getElementById("unidadCantidad");
     const unidadPersonalizada = document.getElementById("unidadPersonalizada");
     if (unidadSelect) {
@@ -573,6 +778,7 @@ async function agregarProducto() {
         unidadPersonalizada.value = "";
         unidadPersonalizada.classList.add("d-none");
     }
+    actualizarControlInstalacionPapel();
 }
 
 function obtenerDescuentoOpcion(opcion) {
@@ -648,7 +854,20 @@ function calcularResumenOpcion(productosOpcion, opcion) {
 }
 
 function eliminarProducto(id) {
+    const productoEliminado = productos.find((producto) => producto.id === id);
+    if (esLineaInstalacionPapel(productoEliminado)) {
+        const idsOrigen = Array.isArray(productoEliminado.productosOrigenIds)
+            ? productoEliminado.productosOrigenIds
+            : [];
+        productos.forEach((producto) => {
+            if (idsOrigen.includes(producto.id)) {
+                producto.instalacionPapel = false;
+            }
+        });
+    }
+
     productos = productos.filter((producto) => producto.id !== id);
+    sincronizarInstalacionesPapel();
     refrescarCotizacion();
 }
 
@@ -664,6 +883,11 @@ function abrirModalEdicion(id) {
     document.getElementById("editarCantidad").value = producto.cantidad;
     aplicarUnidadSeleccionada("editarUnidad", "editarUnidadPersonalizada", producto.unidad);
     document.getElementById("editarPrecio").value = producto.precio;
+    const editarInstalacionPapel = document.getElementById("editarInstalacionPapel");
+    if (editarInstalacionPapel) {
+        editarInstalacionPapel.checked = producto.instalacionPapel || productoTieneInstalacionPapel(producto.id);
+    }
+    actualizarControlInstalacionPapelEdicion();
     const editarImagenProducto = document.getElementById("editarImagenProducto");
     const quitarImagenEditar = document.getElementById("quitarImagenEditar");
     if (editarImagenProducto) {
@@ -712,6 +936,10 @@ async function guardarEdicionProducto() {
             return;
         }
 
+        const esInstalacionPapel = esLineaInstalacionPapel(productos[indice]);
+        const incluirInstalacionPapel = !esInstalacionPapel
+            && esTextoPapelDeColgadura(`${titulo} ${subtitulo}`)
+            && Boolean(document.getElementById("editarInstalacionPapel")?.checked);
         const nuevaImagen = await leerImagenDesdeInput("editarImagenProducto");
         const quitarImagenEditar = document.getElementById("quitarImagenEditar");
         const quitarImagen = quitarImagenEditar ? quitarImagenEditar.checked : false;
@@ -730,6 +958,10 @@ async function guardarEdicionProducto() {
         productos[indice].precio = precio;
         productos[indice].subtotal = calcularSubtotal(cantidad, precio);
         productos[indice].imagen = imagenFinal;
+        if (!esInstalacionPapel) {
+            productos[indice].instalacionPapel = incluirInstalacionPapel;
+            sincronizarInstalacionPapel(productos[indice], incluirInstalacionPapel);
+        }
 
         refrescarCotizacion();
 
