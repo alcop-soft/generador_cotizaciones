@@ -109,6 +109,9 @@ let guardandoEdicion = false;
 const UNIDAD_DEFAULT = "Unidades";
 let notaConfirmada = false;
 let notaImagen = "";
+let fechaCotizacion = "";
+let huellaCotizacionGuardada = "";
+const VERSION_COTIZACION_EDITABLE = 2;
 const VENDEDORES = {
     "Mateo Vanegas": "315 2762255",
     "Marina Arbelaez": "320 8940228",
@@ -548,14 +551,245 @@ async function exportarPDF() {
     }
 }
 
+function obtenerDatosCotizacion() {
+    return {
+        version: VERSION_COTIZACION_EDITABLE,
+        fecha: fechaCotizacion,
+        cliente: { genero: document.getElementById("genero").value, nombre: document.getElementById("cliente").value },
+        vendedor: { seleccion: document.getElementById("vendedor").value, otro: document.getElementById("vendedorOtro").value },
+        productos: productos.map((producto) => ({ ...producto })),
+        opciones: {
+            creadas: obtenerOpcionesDisponibles(), actual: opcionActual, ultimaCreada: ultimaOpcionCreada,
+            titulos: { ...titulosPorOpcion }, descuentos: { ...descuentosPorOpcion }, iva: { ...ivaPorOpcion }
+        },
+        nota: { confirmada: notaConfirmada, texto: document.getElementById("notaRapidaInput").value, imagen: notaImagen }
+    };
+}
+
+function nombreSeguroArchivo(valor) {
+    return (valor || "cotizacion").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "cotizacion";
+}
+
+function descargarBlob(blob, nombre) {
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement("a");
+    enlace.href = url;
+    enlace.download = nombre;
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function generarPDFBlob() {
+    if (typeof window.html2pdf !== "function") throw new Error("No se cargó el generador PDF requerido. Verifique su conexión e inténtelo de nuevo.");
+    await prepararExportacionPDF();
+    try {
+        return await window.html2pdf().set({
+            margin: [12, 10, 12, 10], image: { type: "jpeg", quality: 0.98 },
+            html2canvas: {
+                scale: 2, useCORS: true, backgroundColor: "#ffffff",
+                onclone: (documento) => {
+                    const estilosPDF = documento.createElement("style");
+                    estilosPDF.textContent = `
+                        .no-print { display: none !important; }
+                        .tabla-cotizacion th:last-child, .tabla-cotizacion td:last-child { display: none !important; }
+                        .cotizacion-container { margin: 0 !important; max-width: 100% !important; box-shadow: none !important; border: 0 !important; border-radius: 0 !important; padding-left: 88px !important; }
+                        .lineas-decorativas { display: flex !important; flex-direction: column !important; justify-content: space-between !important; align-items: flex-start !important; position: absolute !important; left: 22px !important; top: 8px !important; bottom: 8px !important; width: 34px !important; }
+                        .opcion-bloque-salto { break-before: page !important; page-break-before: always !important; }
+                        .tabla-cotizacion tr, .tabla-cotizacion td, .tabla-cotizacion th, .nota-total-row, .nota-col, .totales-col, .firma-col, .totales-card, .nota-rapida, .firma-block, .opcion-resumen-row { break-inside: avoid !important; page-break-inside: avoid !important; }
+                    `;
+                    documento.head.appendChild(estilosPDF);
+                }
+            },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+            pagebreak: { mode: ["css", "legacy"] }
+        }).from(document.querySelector(".cotizacion-container")).outputPdf("blob");
+    } finally { limpiarExportacionPDF(); }
+}
+
+async function guardarCotizacionEditable() {
+    const boton = document.getElementById("guardarCotizacionEditable");
+    if (boton.disabled) return;
+    boton.disabled = true;
+    try {
+        const datos = obtenerDatosCotizacion();
+        const nombreSolicitado = window.prompt(
+            "Escribe el nombre del archivo ZIP:",
+            nombreSeguroArchivo(datos.cliente.nombre)
+        );
+        if (nombreSolicitado === null) return;
+        const nombreArchivo = nombreSeguroArchivo(nombreSolicitado);
+        const pdf = await generarPDFBlob();
+        if (JSON.stringify(obtenerDatosCotizacion()) !== JSON.stringify(datos)) {
+            throw new Error("La cotización cambió durante la generación del PDF. Vuelva a guardar para que el PDF y el JSON queden en la misma versión.");
+        }
+        if (!window.JSZip) throw new Error("No se cargó JSZip. Verifique su conexión e inténtelo de nuevo.");
+        const zip = new window.JSZip();
+        zip.file("cotizacion.json", JSON.stringify(datos, null, 2));
+        zip.file("cotizacion.pdf", pdf);
+        const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+        descargarBlob(blob, `${nombreArchivo}.zip`);
+        huellaCotizacionGuardada = JSON.stringify(obtenerDatosCotizacion());
+    } catch (error) {
+        console.error("No se pudo guardar la cotización editable:", error);
+        alert(error.message || "No fue posible crear el ZIP de la cotización.");
+    } finally {
+        limpiarExportacionPDF();
+        boton.disabled = false;
+    }
+}
+
+function esTextoSimple(valor, maximo = 5000) { return typeof valor === "string" && valor.length <= maximo; }
+
+function validarImagenImportada(valor) {
+    return valor === "" || (typeof valor === "string" && valor.length <= 8_000_000
+        && /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[a-zA-Z0-9+/]+=*$/.test(valor));
+}
+
+function validarDatosCotizacion(datos) {
+    if (!datos || typeof datos !== "object" || Array.isArray(datos) || ![1, VERSION_COTIZACION_EDITABLE].includes(datos.version)) {
+        throw new Error("El JSON no corresponde a una versión de cotización compatible.");
+    }
+    if (!esTextoSimple(datos.fecha, 120)
+        || !datos.cliente || !esTextoSimple(datos.cliente.nombre) || !esTextoSimple(datos.cliente.genero, 80)
+        || !datos.vendedor || !esTextoSimple(datos.vendedor.seleccion, 100) || !esTextoSimple(datos.vendedor.otro, 200)
+        || !Array.isArray(datos.productos) || datos.productos.length > 500 || !datos.opciones
+        || !Array.isArray(datos.opciones.creadas) || !datos.opciones.titulos || typeof datos.opciones.titulos !== "object" || Array.isArray(datos.opciones.titulos)
+        || !datos.opciones.descuentos || typeof datos.opciones.descuentos !== "object" || Array.isArray(datos.opciones.descuentos)
+        || !datos.opciones.iva || typeof datos.opciones.iva !== "object" || Array.isArray(datos.opciones.iva)
+        || !datos.nota || typeof datos.nota.confirmada !== "boolean" || !esTextoSimple(datos.nota.texto)
+        || !validarImagenImportada(datos.nota.imagen)) {
+        throw new Error("El archivo no contiene todos los campos necesarios o tiene datos inválidos.");
+    }
+    const ids = new Set();
+    const productosValidados = datos.productos.map((item) => {
+        if (!item || typeof item !== "object" || !Number.isSafeInteger(item.id) || item.id <= 0 || ids.has(item.id)
+            || !esTextoSimple(item.titulo) || !esTextoSimple(item.subtitulo) || !esTextoSimple(item.descripcion)
+            || !Number.isFinite(item.cantidad) || item.cantidad <= 0 || !esTextoSimple(item.unidad, 100) || !item.unidad
+            || !Number.isFinite(item.precio) || item.precio <= 0 || !Number.isFinite(item.subtotal) || item.subtotal < 0
+            || item.subtotal !== calcularSubtotal(item.cantidad, item.precio)
+            || !Number.isSafeInteger(Number(item.opcion)) || Number(item.opcion) <= 0 || !validarImagenImportada(item.imagen)
+            || (item.esInstalacionPapel && (!Array.isArray(item.productosOrigenIds) || item.productosOrigenIds.length > 500 || !item.productosOrigenIds.every(Number.isSafeInteger)))) {
+            throw new Error("Uno de los productos del ZIP está incompleto o contiene datos inválidos.");
+        }
+        ids.add(item.id);
+        if (item.instalacionPapel !== undefined && typeof item.instalacionPapel !== "boolean") throw new Error("Un producto tiene datos de instalación inválidos.");
+        if (item.esInstalacionPapel !== undefined && typeof item.esInstalacionPapel !== "boolean") throw new Error("Un producto tiene datos de instalación inválidos.");
+        return {
+            id: item.id, titulo: item.titulo, subtitulo: item.subtitulo, descripcion: item.descripcion,
+            cantidad: item.cantidad, unidad: item.unidad, precio: item.precio, subtotal: item.subtotal,
+            imagen: item.imagen, opcion: Number(item.opcion),
+            ...(item.instalacionPapel !== undefined ? { instalacionPapel: item.instalacionPapel } : {}),
+            ...(item.esInstalacionPapel ? { esInstalacionPapel: true, productosOrigenIds: [...item.productosOrigenIds] } : {})
+        };
+    });
+    const opciones = datos.opciones.creadas;
+    if (!opciones.length || opciones.length > 100 || opciones.some((o) => !Number.isSafeInteger(o) || o <= 0)
+        || new Set(opciones).size !== opciones.length || !Number.isSafeInteger(datos.opciones.actual)
+        || !opciones.includes(datos.opciones.actual) || !Number.isSafeInteger(datos.opciones.ultimaCreada)
+        || datos.opciones.ultimaCreada < Math.max(...opciones)) throw new Error("La lista de opciones de la cotización es inválida.");
+    for (const mapa of [datos.opciones.titulos, datos.opciones.descuentos, datos.opciones.iva]) {
+        if (Object.keys(mapa).length > 100) throw new Error("La cotización contiene demasiadas opciones.");
+        if (Object.keys(mapa).some((key) => !/^[1-9]\d*$/.test(key) || !opciones.includes(Number(key)))) throw new Error("La cotización contiene una configuración de opción inválida.");
+    }
+    const generosValidos = Array.from(document.getElementById("genero").options).map((option) => option.value);
+    const vendedoresValidos = Array.from(document.getElementById("vendedor").options).map((option) => option.value);
+    if (!generosValidos.includes(datos.cliente.genero) || !vendedoresValidos.includes(datos.vendedor.seleccion)) throw new Error("El cliente o vendedor no es compatible con esta versión de la cotización.");
+    if (productosValidados.some((item) => !opciones.includes(item.opcion))) throw new Error("Un producto pertenece a una opción que no existe en la cotización.");
+    const idsImportados = new Set(productosValidados.map((item) => item.id));
+    if (productosValidados.some((item) => item.esInstalacionPapel && item.productosOrigenIds.some((id) => !idsImportados.has(id)))) throw new Error("La relación de productos de una instalación está incompleta.");
+    Object.values(datos.opciones.titulos).forEach((v) => { if (!esTextoSimple(v, 200)) throw new Error("Un título de opción no es válido."); });
+    Object.values(datos.opciones.descuentos).forEach((v) => { if (!Number.isFinite(v) || v < 0 || v > 100) throw new Error("Un descuento no es válido."); });
+    Object.values(datos.opciones.iva).forEach((v) => { if (typeof v !== "boolean") throw new Error("La configuración de IVA no es válida."); });
+    const datosNormalizados = { ...datos, version: VERSION_COTIZACION_EDITABLE, productos: productosValidados };
+    delete datosNormalizados.numeroCotizacion;
+    return datosNormalizados;
+}
+
+async function leerCotizacionZip(archivo) {
+    if (!archivo || archivo.size > 35_000_000 || !/\.zip$/i.test(archivo.name)) {
+        throw new Error("Seleccione un ZIP de cotización de hasta 35 MB. Los PDF antiguos no se pueden editar desde aquí.");
+    }
+    if (!window.JSZip) throw new Error("No se cargó JSZip. Verifique su conexión e inténtelo de nuevo.");
+    const zip = await window.JSZip.loadAsync(archivo);
+    const jsonEntry = zip.file("cotizacion.json");
+    const pdfEntry = zip.file("cotizacion.pdf");
+    const entradas = Object.values(zip.files);
+    if (!jsonEntry || !pdfEntry || jsonEntry.dir || pdfEntry.dir || entradas.length !== 2
+        || entradas.some((entrada) => entrada.dir || !["cotizacion.json", "cotizacion.pdf"].includes(entrada.name))) {
+        throw new Error("El ZIP debe incluir cotizacion.json y cotizacion.pdf. Un PDF antiguo por sí solo no contiene datos estructurados editables.");
+    }
+    const tamanoJson = jsonEntry._data && jsonEntry._data.uncompressedSize;
+    const tamanoPdf = pdfEntry._data && pdfEntry._data.uncompressedSize;
+    if (!Number.isSafeInteger(tamanoJson) || tamanoJson > 5_000_000
+        || !Number.isSafeInteger(tamanoPdf) || tamanoPdf > 30_000_000) throw new Error("El contenido descomprimido del ZIP supera el tamaño permitido o no tiene un tamaño válido.");
+    let datos;
+    try { datos = JSON.parse(await jsonEntry.async("string")); }
+    catch { throw new Error("El JSON de la cotización está dañado o no es válido."); }
+    const validados = validarDatosCotizacion(datos);
+    const pdf = await pdfEntry.async("uint8array");
+    if (pdf.length < 5 || new TextDecoder().decode(pdf.slice(0, 5)) !== "%PDF-") throw new Error("El PDF incluido en el ZIP está dañado.");
+    return validados;
+}
+
+function aplicarDatosCotizacion(datos) {
+    productos = datos.productos.map((item) => ({ ...item }));
+    descuentosPorOpcion = { ...datos.opciones.descuentos };
+    ivaPorOpcion = { ...datos.opciones.iva };
+    titulosPorOpcion = { ...datos.opciones.titulos };
+    opcionesCreadas.clear();
+    datos.opciones.creadas.forEach((opcion) => opcionesCreadas.add(opcion));
+    opcionActual = datos.opciones.actual;
+    ultimaOpcionCreada = datos.opciones.ultimaCreada;
+    siguienteProductoId = Math.max(Date.now(), ...productos.map((p) => p.id), 0);
+    document.getElementById("genero").value = datos.cliente.genero;
+    document.getElementById("cliente").value = datos.cliente.nombre;
+    document.getElementById("vendedor").value = datos.vendedor.seleccion;
+    document.getElementById("vendedorOtro").value = datos.vendedor.otro;
+    document.getElementById("notaRapidaInput").value = datos.nota.texto;
+    notaConfirmada = datos.nota.confirmada;
+    notaImagen = datos.nota.imagen;
+    fechaCotizacion = datos.fecha;
+    document.getElementById("fecha").innerText = fechaCotizacion;
+    document.getElementById("imagenProducto").value = "";
+    document.getElementById("notaRapidaImagen").value = "";
+    toggleVendedorOtro(document.getElementById("vendedor"), document.getElementById("vendedorOtro"));
+    actualizarSaludo(); actualizarNombreVendedor(); actualizarNotaRapida(); sincronizarOpcionesDisponibles(); refrescarCotizacion();
+    huellaCotizacionGuardada = JSON.stringify(obtenerDatosCotizacion());
+}
+
+async function importarCotizacionDesdeInput(evento) {
+    const input = evento.currentTarget;
+    const archivo = input.files && input.files[0];
+    input.value = "";
+    if (!archivo) return;
+    try {
+        const datos = await leerCotizacionZip(archivo);
+        const hayBorrador = ["producto", "productoDescripcion", "cantidad", "precio", "unidadPersonalizada"]
+            .some((id) => document.getElementById(id).value.trim())
+            || Boolean(document.getElementById("imagenProducto").files.length);
+        if ((hayBorrador || (huellaCotizacionGuardada && JSON.stringify(obtenerDatosCotizacion()) !== huellaCotizacionGuardada))
+            && !window.confirm("Hay cambios sin guardar en la cotización actual. ¿Desea reemplazarla con la cotización del ZIP?")) return;
+        aplicarDatosCotizacion(datos);
+    } catch (error) {
+        console.error("No se pudo abrir la cotización editable:", error);
+        alert(error.message || "No fue posible leer el ZIP. La cotización actual no se modificó.");
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const fecha = new Date();
     const opcionesFecha = { day: "numeric", month: "long", year: "numeric" };
     const fechaFormateada = fecha.toLocaleDateString("es-CO", opcionesFecha);
     document.getElementById("fecha").innerText = `Pereira, ${fechaFormateada}`;
-
+    fechaCotizacion = document.getElementById("fecha").innerText;
     document.getElementById("agregarProducto").addEventListener("click", agregarProducto);
     document.getElementById("generarPDF").addEventListener("click", exportarPDF);
+    document.getElementById("guardarCotizacionEditable").addEventListener("click", guardarCotizacionEditable);
+    document.getElementById("editarCotizacionExistente").addEventListener("click", () => document.getElementById("archivoCotizacionZip").click());
+    document.getElementById("archivoCotizacionZip").addEventListener("change", importarCotizacionDesdeInput);
     document.getElementById("agregarTabla").addEventListener("click", agregarNuevaTabla);
     document.getElementById("genero").addEventListener("change", actualizarSaludo);
     document.getElementById("cliente").addEventListener("input", actualizarSaludo);
@@ -698,6 +932,7 @@ document.addEventListener("DOMContentLoaded", () => {
     actualizarNotaRapida();
     actualizarControlInstalacionPapel();
     refrescarCotizacion();
+    huellaCotizacionGuardada = JSON.stringify(obtenerDatosCotizacion());
 
     window.addEventListener("beforeprint", () => {
         if (exportacionEnCurso) {
